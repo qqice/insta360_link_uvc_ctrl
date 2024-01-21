@@ -1,8 +1,7 @@
 #include "libuvc/libuvc.h"
 #include <cstdio>
 #include <unistd.h>
-#include "opencv2/highgui/highgui_c.h"
-
+#include <opencv2/opencv.hpp>
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
  * input queue. If this function takes too long, you'll start losing frames. */
@@ -69,24 +68,10 @@ void cb(uvc_frame_t *frame, void *ptr) {
    * my_obj->my_func(bgr);
    */
 
-  // Use opencv.highgui to display the image:
+  cv::Mat mat(cv::Size(frame->width, frame->height), CV_8UC3, frame->data, cv::Mat::AUTO_STEP);
 
-  //创建一个cvImg
-  IplImage* cvImg;
-
-  cvImg = cvCreateImageHeader(
-      cvSize(bgr->width, bgr->height),
-      IPL_DEPTH_8U,
-      3);
-
-  cvSetData(cvImg, bgr->data, bgr->width * 3);
-
-  cvNamedWindow("Test", CV_WINDOW_AUTOSIZE);
-  cvShowImage("Test", cvImg);
-  cvWaitKey(10);
-
-  cvReleaseImageHeader(&cvImg);
-
+  // 显示图像
+  cv::imshow("UVC Test", mat);
 
   uvc_free_frame(bgr);
 }
