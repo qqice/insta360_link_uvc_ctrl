@@ -5,8 +5,8 @@
 
 void set_camera_control(uvc_device_handle_t *devh) {
   int res;
-  uint16_t wValue = 0x16;     // wValue is Control Selector (0x16) << 8
-  uint16_t wIndex = 0x09;     // wIndex is Entity (0x09) << 8 | Interface (0x00)
+  uint16_t Ctrl = 0x16;     // wValue is Control Selector (0x16) << 8
+  uint16_t Unit = 0x09;     // wIndex is Entity (0x09) << 8 | Interface (0x00)
   uint16_t wLength = 4;         // wLength is the length of the control data, 0 for no data
   unsigned char *data;   // Data pointer, NULL for no data
   data = (unsigned char *)malloc(wLength);
@@ -17,8 +17,8 @@ void set_camera_control(uvc_device_handle_t *devh) {
   // Send the control request
   res = uvc_set_ctrl(
       devh,
-      wValue,
-      wIndex,
+      Unit,
+      Ctrl,
       data,
       wLength
   );
