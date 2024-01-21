@@ -67,12 +67,25 @@ void cb(uvc_frame_t *frame, void *ptr) {
    * my_type *my_obj = (*my_type) ptr;
    * my_obj->my_func(bgr);
    */
-
-  cv::Mat mat(cv::Size(frame->width, frame->height), CV_8UC3, frame->data, cv::Mat::AUTO_STEP);
-
+  cv::Mat mat;
+  if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
+    // 将UVC帧的数据转换为OpenCV的Mat
+    cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
+    mat = cv::imdecode(mjpegMat, cv::IMREAD_COLOR); // 解码MJPEG数据
+  } else {
+    // 处理其他格式或错误
+    std::cerr << "Frame format is not MJPEG!" << std::endl;
+    return;
+  }
   // 显示图像
-  cv::imshow("UVC Test", mat);
-
+  if (!mat.empty()) {
+    // 显示图像
+    cv::imshow("UVC Test", mat);
+    // 等待1ms，以便OpenCV可以处理事件
+    cv::waitKey(1);
+  } else {
+    std::cerr << "Could not decode MJPEG frame!" << std::endl;
+  }
   uvc_free_frame(bgr);
 }
 
