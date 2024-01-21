@@ -3,33 +3,38 @@
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
 
-void set_camera_control(uvc_device_handle_t *devh) {
+void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char vertical_direction,const char horizontal_speed,const char vertical_speed) {
   int res;
-  uint16_t Ctrl = 0x16;     // wValue is Control Selector (0x16) << 8
-  uint16_t Unit = 0x09;     // wIndex is Entity (0x09) << 8 | Interface (0x00)
-  uint16_t wLength = 4;         // wLength is the length of the control data, 0 for no data
-  unsigned char *data;   // Data pointer, NULL for no data
-  data = (unsigned char *)malloc(wLength);
-  data[0] = 0xff;
-  data[1] = 0x04;
-  data[2] = 0x00;
-  data[3] = 0x01;
+  uint16_t Ctrl = 0x16;     //Control Selector (0x16)
+  uint16_t Unit = 0x09;     //Entity (0x09)
+  uint16_t Length = 4;      //数据帧长度
+  unsigned char *data;
+  data = (unsigned char *)malloc(Length);
+  data[0] = horizontal_direction;
+  data[1] = horizontal_speed;
+  data[2] = vertical_direction;
+  data[3] = vertical_speed;
   // Send the control request
   res = uvc_set_ctrl(
       devh,
       Unit,
       Ctrl,
       data,
-      wLength
+      Length
   );
 
-  if (res != wLength) {
+  if (res != Length) {
     printf("Failed to set camera control\n");
     printf("res = %d\n", res);
   } else {
     printf("Control request sent successfully\n");
   }
 }
+
+void stop_camera_gimbal_control(uvc_device_handle_t *devh) {
+  set_camera_gimbal_control(devh,0x00,0x01,0x00,0x01);
+}
+
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
  * input queue. If this function takes too long, you'll start losing frames. */
@@ -218,7 +223,7 @@ int main(int argc, char **argv) {
           // } else {
           //   uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
           // }
-          set_camera_control(devh);//控制帧发送
+          set_camera_gimbal_control(devh,0xff,0x04,0x00,0x01);//控制帧发送
           sleep(10); /* stream for 10 seconds */
 
           /* End the stream. Blocks until last callback is serviced */
