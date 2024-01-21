@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
           // } else {
           //   uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
           // }
-          set_camera_control(devh);
+          set_camera_control(devh);//控制帧发送
           sleep(10); /* stream for 10 seconds */
 
           /* End the stream. Blocks until last callback is serviced */
