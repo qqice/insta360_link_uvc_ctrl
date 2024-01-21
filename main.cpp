@@ -1,6 +1,7 @@
 #include <libuvc/libuvc.h>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <unistd.h>
 
 void cb(uvc_frame_t *frame, void *ptr) {
     uvc_frame_t *bgr;
@@ -73,10 +74,7 @@ int main() {
                 // 如果你需要控制云台，这里可能需要发送自定义命令
                 // ...
 
-                // 运行流直到按下 'q' 键
-                while (cv::waitKey(1) != 'q') {
-                    uvc_handle_events(ctx);
-                }
+                sleep(10); /* stream for 10 seconds */
 
                 // 停止流
                 uvc_stop_streaming(devh);
