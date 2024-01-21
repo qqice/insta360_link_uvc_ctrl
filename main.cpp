@@ -55,23 +55,9 @@ void cb(uvc_frame_t *frame, void *ptr) {
     printf(" * got image %u\n",  frame->sequence);
   }
 
-  /* Call a user function:
-   *
-   * my_type *my_obj = (*my_type) ptr;
-   * my_user_function(ptr, bgr);
-   * my_other_function(ptr, bgr->data, bgr->width, bgr->height);
-   */
-
-  /* Call a C++ method:
-   *
-   * my_type *my_obj = (*my_type) ptr;
-   * my_obj->my_func(bgr);
-   */
-
   cv::Mat mat;
   if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
     // 将UVC帧的数据转换为OpenCV的Mat
-    // cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
     std::vector<uchar> mjpegdata(static_cast<uchar*>(frame->data), static_cast<uchar*>(frame->data) + frame->data_bytes);
     mat = cv::imdecode(mjpegdata, cv::IMREAD_COLOR); // 解码MJPEG数据
   } else {
@@ -136,8 +122,8 @@ int main(int argc, char **argv) {
       const uvc_format_desc_t *format_desc = uvc_get_format_descs(devh);
       const uvc_frame_desc_t *frame_desc = format_desc->frame_descs;
       enum uvc_frame_format frame_format;
-      int width = 640;
-      int height = 480;
+      int width = 1920;
+      int height = 1080;
       int fps = 30;
 
       switch (format_desc->bDescriptorSubtype) {
@@ -183,26 +169,27 @@ int main(int argc, char **argv) {
         } else {
           puts("Streaming...");
 
-          /* enable auto exposure - see uvc_set_ae_mode documentation */
-          puts("Enabling auto exposure ...");
-          const uint8_t UVC_AUTO_EXPOSURE_MODE_AUTO = 2;
-          res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_AUTO);
-          if (res == UVC_SUCCESS) {
-            puts(" ... enabled auto exposure");
-          } else if (res == UVC_ERROR_PIPE) {
-            /* this error indicates that the camera does not support the full AE mode;
-             * try again, using aperture priority mode (fixed aperture, variable exposure time) */
-            puts(" ... full AE not supported, trying aperture priority mode");
-            const uint8_t UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY = 8;
-            res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY);
-            if (res < 0) {
-              uvc_perror(res, " ... uvc_set_ae_mode failed to enable aperture priority mode");
-            } else {
-              puts(" ... enabled aperture priority auto exposure mode");
-            }
-          } else {
-            uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
-          }
+          //摄像头不支持自动曝光，所以这里注释掉
+          // /* enable auto exposure - see uvc_set_ae_mode documentation */
+          // puts("Enabling auto exposure ...");
+          // const uint8_t UVC_AUTO_EXPOSURE_MODE_AUTO = 2;
+          // res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_AUTO);
+          // if (res == UVC_SUCCESS) {
+          //   puts(" ... enabled auto exposure");
+          // } else if (res == UVC_ERROR_PIPE) {
+          //   /* this error indicates that the camera does not support the full AE mode;
+          //    * try again, using aperture priority mode (fixed aperture, variable exposure time) */
+          //   puts(" ... full AE not supported, trying aperture priority mode");
+          //   const uint8_t UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY = 8;
+          //   res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY);
+          //   if (res < 0) {
+          //     uvc_perror(res, " ... uvc_set_ae_mode failed to enable aperture priority mode");
+          //   } else {
+          //     puts(" ... enabled aperture priority auto exposure mode");
+          //   }
+          // } else {
+          //   uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
+          // }
 
           sleep(10); /* stream for 10 seconds */
 
