@@ -9,11 +9,11 @@ void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
   auto *frame_format = (enum uvc_frame_format *)ptr;
-  /* FILE *fp;
-   * static int jpeg_count = 0;
-   * static const char *H264_FILE = "iOSDevLog.h264";
-   * static const char *MJPEG_FILE = ".jpeg";
-   * char filename[16]; */
+  FILE *fp;
+  static int jpeg_count = 0;
+  static const char *H264_FILE = "iOSDevLog.h264";
+  static const char *MJPEG_FILE = ".jpeg";
+  char filename[16];
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
@@ -33,10 +33,10 @@ void cb(uvc_frame_t *frame, void *ptr) {
      * fclose(fp); */
     break;
   case UVC_COLOR_FORMAT_MJPEG:
-    /* sprintf(filename, "%d%s", jpeg_count++, MJPEG_FILE);
-     * fp = fopen(filename, "w");
-     * fwrite(frame->data, 1, frame->data_bytes, fp);
-     * fclose(fp); */
+    sprintf(filename, "%d%s", jpeg_count++, MJPEG_FILE);
+    fp = fopen(filename, "w");
+    fwrite(frame->data, 1, frame->data_bytes, fp);
+    fclose(fp);
     break;
   case UVC_COLOR_FORMAT_YUYV:
     /* Do the BGR conversion */
@@ -67,25 +67,27 @@ void cb(uvc_frame_t *frame, void *ptr) {
    * my_type *my_obj = (*my_type) ptr;
    * my_obj->my_func(bgr);
    */
-  cv::Mat mat;
-  if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
-    // 将UVC帧的数据转换为OpenCV的Mat
-    cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
-    mat = cv::imdecode(mjpegMat, cv::IMREAD_COLOR); // 解码MJPEG数据
-  } else {
-    // 处理其他格式或错误
-    std::cerr << "Frame format is not MJPEG!" << std::endl;
-    return;
-  }
-  // 显示图像
-  if (!mat.empty()) {
-    // 显示图像
-    cv::imshow("UVC Test", mat);
-    // 等待1ms，以便OpenCV可以处理事件
-    cv::waitKey(1);
-  } else {
-    std::cerr << "Could not decode MJPEG frame!" << std::endl;
-  }
+
+  // cv::Mat mat;
+  // if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
+  //   // 将UVC帧的数据转换为OpenCV的Mat
+  //   cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
+  //   mat = cv::imdecode(mjpegMat, cv::IMREAD_COLOR); // 解码MJPEG数据
+  // } else {
+  //   // 处理其他格式或错误
+  //   std::cerr << "Frame format is not MJPEG!" << std::endl;
+  //   return;
+  // }
+  // // 显示图像
+  // if (!mat.empty()) {
+  //   // 显示图像
+  //   cv::imshow("UVC Test", mat);
+  //   // 等待1ms，以便OpenCV可以处理事件
+  //   cv::waitKey(1);
+  // } else {
+  //   std::cerr << "Could not decode MJPEG frame!" << std::endl;
+  // }
+
   uvc_free_frame(bgr);
 }
 
