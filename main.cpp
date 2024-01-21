@@ -25,6 +25,7 @@ void set_camera_control(uvc_device_handle_t *devh) {
 
   if (res != wLength) {
     printf("Failed to set camera control\n");
+    printf("res = %d\n", res);
   } else {
     printf("Control request sent successfully\n");
   }
