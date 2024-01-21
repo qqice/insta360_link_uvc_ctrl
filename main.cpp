@@ -37,6 +37,12 @@ void cb(uvc_frame_t *frame, void *ptr) {
     // fp = fopen(filename, "w");
     // fwrite(frame->data, 1, frame->data_bytes, fp);
     // fclose(fp);
+    ret = uvc_any2bgr(frame, bgr);
+    if (ret) {
+      uvc_perror(ret, "uvc_any2bgr");
+      uvc_free_frame(bgr);
+      return;
+    }
     break;
   case UVC_COLOR_FORMAT_YUYV:
     /* Do the BGR conversion */
@@ -68,17 +74,18 @@ void cb(uvc_frame_t *frame, void *ptr) {
    * my_obj->my_func(bgr);
    */
 
-  cv::Mat mat;
-  if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
-    // 将UVC帧的数据转换为OpenCV的Mat
-    // cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
-    std::vector<uchar> mjpegdata(frame->data, frame->data + frame->data_bytes);
-    mat = cv::imdecode(mjpegdata, cv::IMREAD_COLOR); // 解码MJPEG数据
-  } else {
-    // 处理其他格式或错误
-    std::cerr << "Frame format is not MJPEG!" << std::endl;
-    return;
-  }
+  // cv::Mat mat;
+  // if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
+  //   // 将UVC帧的数据转换为OpenCV的Mat
+  //   // cv::Mat mjpegMat(frame->height, frame->width, CV_8UC1, frame->data, frame->step);
+  //   std::vector<uchar> mjpegdata(frame->data, frame->data + frame->data_bytes);
+  //   mat = cv::imdecode(mjpegdata, cv::IMREAD_COLOR); // 解码MJPEG数据
+  // } else {
+  //   // 处理其他格式或错误
+  //   std::cerr << "Frame format is not MJPEG!" << std::endl;
+  //   return;
+  // }
+  cv::Mat mat(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->step);
   // 显示图像
   if (!mat.empty()) {
     // 显示图像
