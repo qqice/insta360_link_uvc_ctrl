@@ -2,6 +2,33 @@
 #include <cstdio>
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
+
+void set_camera_control(uvc_device_handle_t *devh) {
+  int res;
+  uint16_t wValue = 0x16;     // wValue is Control Selector (0x16) << 8
+  uint16_t wIndex = 0x09;     // wIndex is Entity (0x09) << 8 | Interface (0x00)
+  uint16_t wLength = 4;         // wLength is the length of the control data, 0 for no data
+  unsigned char *data;   // Data pointer, NULL for no data
+  data = (unsigned char *)malloc(wLength);
+  data[0] = 0xff;
+  data[1] = 0x04;
+  data[2] = 0x00;
+  data[3] = 0x01;
+  // Send the control request
+  res = uvc_set_ctrl(
+      devh,
+      wValue,
+      wIndex,
+      data,
+      wLength
+  );
+
+  if (res != wLength) {
+    printf("Failed to set camera control\n");
+  } else {
+    printf("Control request sent successfully\n");
+  }
+}
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
  * input queue. If this function takes too long, you'll start losing frames. */
