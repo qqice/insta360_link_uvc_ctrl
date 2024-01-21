@@ -62,7 +62,6 @@ int main() {
             );
 
             cv::namedWindow("UVC Test", cv::WINDOW_AUTOSIZE);
-
             // 启动流
             res = uvc_start_streaming(devh, &ctrl, cb, (void *) 12345, 0);
             if (res < 0) {
