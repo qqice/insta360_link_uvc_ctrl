@@ -3,6 +3,16 @@
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
 
+int width = 1920;
+int height = 1080;
+int fps = 30;
+const int bitrate = 3000;
+const char* rtsp_server = "rtsp:////10.0.0.137:8554/mystream";
+
+cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=ultrafast bitrate="+ std::to_string(bitrate) +" key-int-max=" + std::to_string(fps * 2) +
+              " ! video/x-h264,profile=baseline ! rtspclientsink location=" + rtsp_server,
+              cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
+
 void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char horizontal_speed,const char vertical_direction,const char vertical_speed) {
   int res;
   uint16_t Ctrl = 0x16;     //Control Selector (0x16)
@@ -157,6 +167,8 @@ void cb(uvc_frame_t *frame, void *ptr) {
   // 显示图像
   if (!mat.empty()) {
     // 显示图像
+    out.write(mat);
+    std::cout << "write frame to server" << std::endl;
     cv::imshow("UVC Test", mat);
     // 等待1ms，以便OpenCV可以处理事件
     cv::waitKey(1);
@@ -211,9 +223,6 @@ int main(int argc, char **argv) {
       const uvc_format_desc_t *format_desc = uvc_get_format_descs(devh);
       const uvc_frame_desc_t *frame_desc = format_desc->frame_descs;
       enum uvc_frame_format frame_format;
-      int width = 1920;
-      int height = 1080;
-      int fps = 30;
 
       switch (format_desc->bDescriptorSubtype) {
       case UVC_VS_FORMAT_MJPEG:
@@ -258,9 +267,9 @@ int main(int argc, char **argv) {
         } else {
           puts("Streaming...");
 
-          set_camera_gimbal_control(devh,0xff,0x04,0x00,0x01);//控制帧发送
+          set_camera_gimbal_control(devh,0x00,0x01,0x00,0x01);//控制帧发送
 
-          sleep(30); /* stream for 10 seconds */
+          sleep(600); /* stream for 10 minutes */
 
           stop_camera_gimbal_control(devh);
           set_camera_gimbal_to_center(devh);
