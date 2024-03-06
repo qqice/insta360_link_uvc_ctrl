@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
 
-void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char vertical_direction,const char horizontal_speed,const char vertical_speed) {
+void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char horizontal_speed,const char vertical_direction,const char vertical_speed) {
   int res;
   uint16_t Ctrl = 0x16;     //Control Selector (0x16)
   uint16_t Unit = 0x09;     //Entity (0x09)
@@ -14,6 +14,7 @@ void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_d
   data[1] = horizontal_speed;
   data[2] = vertical_direction;
   data[3] = vertical_speed;
+  printf("horizontal_direction = %d, horizontal_speed = %d, vertical_direction = %d, vertical_speed = %d\n",horizontal_direction,horizontal_speed,vertical_direction,vertical_speed);
   // Send the control request
   res = uvc_set_ctrl(
       devh,
@@ -35,6 +36,96 @@ void stop_camera_gimbal_control(uvc_device_handle_t *devh) {
   set_camera_gimbal_control(devh,0x00,0x01,0x00,0x01);
 }
 
+void set_camera_gimbal_to_center(uvc_device_handle_t *devh) {
+  int res;
+  uint16_t Ctrl = 0x1a;     //Control Selector (0x16)
+  uint16_t Unit = 0x09;     //Entity (0x09)
+  uint16_t Length = 8;      //数据帧长度
+  unsigned char *data;
+  data = (unsigned char *)calloc(Length,1);
+  res = uvc_set_ctrl(
+      devh,
+      Unit,
+      Ctrl,
+      data,
+      Length
+  );
+    if (res != Length) {
+    printf("Failed to set camera gimbal to center\n");
+    printf("res = %d\n", res);
+  } else {
+    printf("Set camera gimbal to center control request sent successfully\n");
+  }
+}
+
+//zoom from 100 to 400
+void set_camera_zoom_absolute(uvc_device_handle_t *devh, int zoom) {
+  int res;
+  uint16_t Ctrl = 0x0b;     //Control Selector (0x0b)
+  uint16_t Unit = 0x01;     //Entity (0x01)
+  uint16_t Length = 2;      //数据帧长度
+  unsigned char *data;
+  data = (unsigned char *)malloc(Length);
+  data[0] = zoom & 0xff;
+  data[1] = (zoom >> 8) & 0xff;
+  // Send the control request
+  res = uvc_set_ctrl(
+      devh,
+      Unit,
+      Ctrl,
+      data,
+      Length
+  );
+
+  if (res != Length) {
+    printf("Failed to set camera zoom\n");
+    printf("res = %d\n", res);
+  } else {
+    printf("Control request sent successfully\n");
+  }
+}
+
+//zoom from 100 to 400
+//horizontal_location from -1397 to 1385
+//vertical_location from -536 to 846
+void set_camera_gimbal_location(uvc_device_handle_t *devh,int horizontal_location,int vertical_location,int zoom) {
+  int res;
+  uint16_t Ctrl = 0x02;     //Control Selector (0x02)
+  uint16_t Unit = 0x09;     //Entity (0x09)
+  uint16_t Length = 52;      //数据帧长度
+  unsigned char *data;
+  data = (unsigned char *)calloc(Length,1);
+  
+  data[50] = zoom & 0xff;
+  data[51] = (zoom >> 8) & 0xff;
+
+  data[42] = (vertical_location >= 0) ? vertical_location & 0xff : ~(-vertical_location & 0xff) + 1;
+  data[43] = (vertical_location >= 0) ? (vertical_location >> 8) & 0xff : ~((-vertical_location >> 8) & 0xff) + 1;
+  data[44] = (vertical_location >= 0) ? (vertical_location >> 16) & 0xff : ~((-vertical_location >> 16) & 0xff) + 1;
+  data[45] = (vertical_location >= 0) ? (vertical_location >> 24) & 0xff : ~((-vertical_location >> 24) & 0xff) + 1;
+
+  data[38] = (horizontal_location >= 0) ? horizontal_location & 0xff : ~(-horizontal_location & 0xff) + 1;
+  data[39] = (horizontal_location >= 0) ? (horizontal_location >> 8) & 0xff : ~((-horizontal_location >> 8) & 0xff) + 1;
+  data[40] = (horizontal_location >= 0) ? (horizontal_location >> 16) & 0xff : ~((-horizontal_location >> 16) & 0xff) + 1;
+  data[41] = (horizontal_location >= 0) ? (horizontal_location >> 24) & 0xff : ~((-horizontal_location >> 24) & 0xff) + 1;
+
+  // Send the control request
+  res = uvc_set_ctrl(
+      devh,
+      Unit,
+      Ctrl,
+      data,
+      Length
+  );
+
+  if (res != Length) {
+    printf("Failed to set camera gimbal location\n");
+    printf("res = %d\n", res);
+  } else {
+    printf("Control request sent successfully\n");
+  }
+}
+
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
  * input queue. If this function takes too long, you'll start losing frames. */
@@ -42,11 +133,6 @@ void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
   auto *frame_format = (enum uvc_frame_format *)ptr;
-  // FILE *fp;
-  // static int jpeg_count = 0;
-  // static const char *H264_FILE = "iOSDevLog.h264";
-  // static const char *MJPEG_FILE = ".jpeg";
-  // char filename[16];
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
@@ -57,36 +143,6 @@ void cb(uvc_frame_t *frame, void *ptr) {
 
   printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %p\n",
     frame->frame_format, frame->width, frame->height, frame->data_bytes, ptr);
-
-  switch (frame->frame_format) {
-  case UVC_FRAME_FORMAT_H264:
-    /* use `ffplay H264_FILE` to play */
-    /* fp = fopen(H264_FILE, "a");
-     * fwrite(frame->data, 1, frame->data_bytes, fp);
-     * fclose(fp); */
-    break;
-  case UVC_COLOR_FORMAT_MJPEG:
-    // sprintf(filename, "%d%s", jpeg_count++, MJPEG_FILE);
-    // fp = fopen(filename, "w");
-    // fwrite(frame->data, 1, frame->data_bytes, fp);
-    // fclose(fp);
-    break;
-  case UVC_COLOR_FORMAT_YUYV:
-    /* Do the BGR conversion */
-    ret = uvc_any2bgr(frame, bgr);
-    if (ret) {
-      uvc_perror(ret, "uvc_any2bgr");
-      uvc_free_frame(bgr);
-      return;
-    }
-    break;
-  default:
-    break;
-  }
-
-  if (frame->sequence % 30 == 0) {
-    printf(" * got image %u\n",  frame->sequence);
-  }
 
   cv::Mat mat;
   if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
@@ -202,30 +258,12 @@ int main(int argc, char **argv) {
         } else {
           puts("Streaming...");
 
-          //摄像头不支持自动曝光，所以这里注释掉
-          // /* enable auto exposure - see uvc_set_ae_mode documentation */
-          // puts("Enabling auto exposure ...");
-          // const uint8_t UVC_AUTO_EXPOSURE_MODE_AUTO = 2;
-          // res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_AUTO);
-          // if (res == UVC_SUCCESS) {
-          //   puts(" ... enabled auto exposure");
-          // } else if (res == UVC_ERROR_PIPE) {
-          //   /* this error indicates that the camera does not support the full AE mode;
-          //    * try again, using aperture priority mode (fixed aperture, variable exposure time) */
-          //   puts(" ... full AE not supported, trying aperture priority mode");
-          //   const uint8_t UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY = 8;
-          //   res = uvc_set_ae_mode(devh, UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY);
-          //   if (res < 0) {
-          //     uvc_perror(res, " ... uvc_set_ae_mode failed to enable aperture priority mode");
-          //   } else {
-          //     puts(" ... enabled aperture priority auto exposure mode");
-          //   }
-          // } else {
-          //   uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
-          // }
           set_camera_gimbal_control(devh,0xff,0x04,0x00,0x01);//控制帧发送
-          sleep(10); /* stream for 10 seconds */
 
+          sleep(30); /* stream for 10 seconds */
+
+          stop_camera_gimbal_control(devh);
+          set_camera_gimbal_to_center(devh);
           /* End the stream. Blocks until last callback is serviced */
           uvc_stop_streaming(devh);
           puts("Done streaming.");
