@@ -7,7 +7,7 @@ int width = 1920;
 int height = 1080;
 int fps = 30;
 const int bitrate = 3000;
-const char* rtsp_server = "rtsp:////10.0.0.137:8554/mystream";
+const char* rtsp_server = "rtsp://10.0.0.137:8554/mystream";
 
 cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=ultrafast bitrate="+ std::to_string(bitrate) +" key-int-max=" + std::to_string(fps * 2) +
               " ! video/x-h264,profile=baseline ! rtspclientsink location=" + rtsp_server,
