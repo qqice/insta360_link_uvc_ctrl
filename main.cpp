@@ -2,16 +2,42 @@
 #include <cstdio>
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
+#include <iostream>
+#include <mosquitto.h>
+#include <cstring>
+#include <thread> // 引入std::thread
+
+// MQTT设置
+const char* MQTT_HOST = "127.0.0.1"; // MQTT代理服务器地址
+const int MQTT_PORT = 1883; // MQTT端口
+const char* MQTT_TOPIC = "camera/control"; // 订阅的主题
 
 int width = 1920;
 int height = 1080;
 int fps = 30;
 const int bitrate = 3000;
-const char* rtsp_server = "rtsp://10.0.0.137:8554/mystream";
+const char* rtsp_server = "rtsp://127.0.0.1:8554/mystream";
 
 cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=ultrafast bitrate="+ std::to_string(bitrate) +" key-int-max=" + std::to_string(fps * 2) +
               " ! video/x-h264,profile=baseline ! rtspclientsink location=" + rtsp_server,
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
+
+// MQTT消息回调函数
+void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message) {
+    if(message->payloadlen){
+        std::cout << "Received message: " << (char*)message->payload << std::endl;
+        // 这里处理接收到的控制数据
+    }else{
+        std::cout << message->topic << " (null)\n";
+    }
+    fflush(stdout);
+}
+
+// MQTT循环处理函数，将在独立线程中运行
+void mqtt_loop(struct mosquitto *mosq) {
+    mosquitto_loop_forever(mosq, -1, 1);
+}
+
 
 void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char horizontal_speed,const char vertical_direction,const char vertical_speed) {
   int res;
@@ -186,6 +212,31 @@ int main(int argc, char **argv) {
   uvc_stream_ctrl_t ctrl;
   uvc_error_t res;
 
+  // 初始化mosquitto库
+  mosquitto_lib_init();
+
+  // 创建新的mosquitto客户端实例
+  struct mosquitto *mosq = mosquitto_new(nullptr, true, nullptr);
+  if(!mosq){
+      std::cerr << "Failed to create mosquitto instance." << std::endl;
+      return -1;
+  }
+
+  // 设置消息回调
+  mosquitto_message_callback_set(mosq, on_message_callback);
+
+  // 连接到MQTT代理服务器
+  if(mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60)){
+      std::cerr << "Could not connect to MQTT Broker." << std::endl;
+      return -1;
+  }
+
+  // 订阅主题
+  mosquitto_subscribe(mosq, nullptr, MQTT_TOPIC, 0);
+
+  // 创建并启动处理MQTT消息的线程
+  std::thread mqtt_thread(mqtt_loop, mosq);
+
   /* Initialize a UVC service context. Libuvc will set up its own libusb
    * context. Replace NULL with a libusb_context pointer to run libuvc
    * from an existing libusb context. */
@@ -271,10 +322,14 @@ int main(int argc, char **argv) {
 
           sleep(600); /* stream for 10 minutes */
 
+          // 等待MQTT线程结束（在这个示例中，线程将无限循环，因此下面的join调用实际上会阻塞）
+          // mqtt_thread.join();
+
           stop_camera_gimbal_control(devh);
           set_camera_gimbal_to_center(devh);
           /* End the stream. Blocks until last callback is serviced */
           uvc_stop_streaming(devh);
+          mosquitto_destroy(mosq);
           puts("Done streaming.");
         }
       }
@@ -292,6 +347,6 @@ int main(int argc, char **argv) {
    * and it closes the libusb context if one was not provided. */
   uvc_exit(ctx);
   puts("UVC exited");
-
+  mosquitto_lib_cleanup();
   return 0;
 }
