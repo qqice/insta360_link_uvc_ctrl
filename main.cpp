@@ -15,10 +15,10 @@ const char* MQTT_TOPIC = "camera/control"; // 订阅的主题
 int width = 1920;
 int height = 1080;
 int fps = 30;
-const int bitrate = 3000;
+const int bitrate = 3000000;
 const char* rtsp_server = "rtsp://127.0.0.1:8554/mystream";
 
-cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=ultrafast bitrate="+ std::to_string(bitrate) +" key-int-max=" + std::to_string(fps * 2) +
+cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! nvvidconv ! nvv4l2h264enc preset-level=1 bitrate="+ std::to_string(bitrate) +" maxperf-enable=1 iframeinterval=" + std::to_string(fps * 2) +
               " ! video/x-h264,profile=baseline ! rtspclientsink location=" + rtsp_server,
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
@@ -195,7 +195,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
     // 显示图像
     out.write(mat);
     std::cout << "write frame to server" << std::endl;
-    cv::imshow("UVC Test", mat);
+    // cv::imshow("UVC Test", mat);
     // 等待1ms，以便OpenCV可以处理事件
     cv::waitKey(1);
   } else {
