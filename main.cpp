@@ -172,7 +172,7 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
             switch (jsonParsed["control"].get<int>())
             {
             case 0:
-              set_camera_gimbal_control(devh,jsonParsed["horizontal_direction"].get<int>(),jsonParsed["horizontal_speed"].get<int>(),jsonParsed["vertical_direction"].get<int>(),jsonParsed["vertical_speed"].get<int>());
+              set_camera_gimbal_control(devh,(char)jsonParsed["horizontal_direction"].get<int>(),(char)jsonParsed["horizontal_speed"].get<int>(),(char)jsonParsed["vertical_direction"].get<int>(),(char)jsonParsed["vertical_speed"].get<int>());
               break;
             case 1:
               stop_camera_gimbal_control(devh);
@@ -356,15 +356,11 @@ int main(int argc, char **argv) {
         } else {
           puts("Streaming...");
 
-          set_camera_gimbal_control(devh,0x00,0x01,0x00,0x01);//控制帧发送
-
           sleep(600); /* stream for 10 minutes */
 
           // 等待MQTT线程结束（在这个示例中，线程将无限循环，因此下面的join调用实际上会阻塞）
           // mqtt_thread.join();
-
-          stop_camera_gimbal_control(devh);
-          set_camera_gimbal_to_center(devh);
+          
           /* End the stream. Blocks until last callback is serviced */
           uvc_stop_streaming(devh);
           mosquitto_destroy(mosq);
