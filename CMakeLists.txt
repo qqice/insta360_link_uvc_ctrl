@@ -5,6 +5,7 @@ project(UVCCapture)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+# 寻找线程库
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
@@ -12,8 +13,12 @@ find_package(Threads REQUIRED)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
+# 寻找libmosquitto库
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquitto REQUIRED)
+
+# 寻找nlohmann_json库
+find_package(nlohmann_json REQUIRED)
 
 # 添加libuvc的头文件和库路径
 # 假设libuvc已经安装在默认的系统库路径中
@@ -29,4 +34,4 @@ find_package(libuvc REQUIRED)
 add_executable(UVCCapture main.cpp)
 
 # 链接OpenCV和libuvc库
-target_link_libraries(UVCCapture ${OpenCV_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads)
+target_link_libraries(UVCCapture ${OpenCV_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)

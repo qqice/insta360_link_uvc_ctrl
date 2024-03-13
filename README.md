@@ -7,5 +7,5 @@ opencv_for_arm64:https://github.com/Qengineering/Install-OpenCV-Raspberry-Pi-64-
 
 opencv_for_jetson:https://github.com/Qengineering/Install-OpenCV-Jetson-Nano
 
-sudo apt install gstreamer1.0-rtsp libmosquitto-dev
+sudo apt install gstreamer1.0-rtsp libmosquitto-dev nlohmann-json3-dev
 
