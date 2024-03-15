@@ -162,13 +162,13 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
     
             // 访问解析后的JSON数据
             std::cout << "control: " << jsonParsed["control"].get<int>() << std::endl;
-            std::cout << "zoom: " << jsonParsed["zoom"].get<int>() << std::endl;
-            std::cout << "horizontal_direction: " << jsonParsed["horizontal_direction"].get<int>() << std::endl;
-            std::cout << "horizontal_speed: " << jsonParsed["horizontal_speed"].get<int>() << std::endl;
-            std::cout << "vertical_direction: " << jsonParsed["vertical_direction"].get<int>() << std::endl;
-            std::cout << "vertical_speed: " << jsonParsed["vertical_speed"].get<int>() << std::endl;
-            std::cout << "horizontal_location: " << jsonParsed["horizontal_location"].get<int>() << std::endl;
-            std::cout << "vertical_location: " << jsonParsed["vertical_location"].get<int>() << std::endl;
+            // std::cout << "zoom: " << jsonParsed["zoom"].get<int>() << std::endl;
+            // std::cout << "horizontal_direction: " << jsonParsed["horizontal_direction"].get<int>() << std::endl;
+            // std::cout << "horizontal_speed: " << jsonParsed["horizontal_speed"].get<int>() << std::endl;
+            // std::cout << "vertical_direction: " << jsonParsed["vertical_direction"].get<int>() << std::endl;
+            // std::cout << "vertical_speed: " << jsonParsed["vertical_speed"].get<int>() << std::endl;
+            // std::cout << "horizontal_location: " << jsonParsed["horizontal_location"].get<int>() << std::endl;
+            // std::cout << "vertical_location: " << jsonParsed["vertical_location"].get<int>() << std::endl;
             switch (jsonParsed["control"].get<int>())
             {
             case 0:
