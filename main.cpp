@@ -7,6 +7,8 @@
 #include <cstring>
 #include <thread>
 #include <csignal>
+#include <ctime>
+#include <sstream>
 #include <nlohmann/json.hpp>
 
 // 标志变量，用来控制循环
@@ -20,6 +22,14 @@ void signalHandler(int signal) {
     }
 }
 
+// 设置字体和颜色
+int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+double fontScale = 1;
+int thickness = 2;
+cv::Scalar color(255, 255, 255); // 白色
+
+// 计算文本宽度和高度，以便将其放置在右上角
+int baseline = 0;
 
 // MQTT设置
 const char* MQTT_HOST = "127.0.0.1"; // MQTT代理服务器地址
@@ -222,6 +232,20 @@ void cb(uvc_frame_t *frame, void *ptr) {
   uvc_error_t ret;
   auto *frame_format = (enum uvc_frame_format *)ptr;
 
+    // 获取当前时间
+  std::time_t now = std::time(0);
+  std::tm* ltm = std::localtime(&now);
+
+  // 将时间转换为字符串
+  std::stringstream ss;
+  ss << 1900 + ltm->tm_year << "-"
+      << 1 + ltm->tm_mon << "-"
+      << ltm->tm_mday << " "
+      << ltm->tm_hour << ":"
+      << ltm->tm_min << ":"
+      << ltm->tm_sec;
+  std::string timestamp = ss.str();
+
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
   if (!bgr) {
@@ -229,14 +253,19 @@ void cb(uvc_frame_t *frame, void *ptr) {
     return;
   }
 
-  printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %p\n",
-    frame->frame_format, frame->width, frame->height, frame->data_bytes, ptr);
+  // printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %p\n",
+  //   frame->frame_format, frame->width, frame->height, frame->data_bytes, ptr);
 
   cv::Mat mat;
   if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
     // 将UVC帧的数据转换为OpenCV的Mat
     std::vector<uchar> mjpegdata(static_cast<uchar*>(frame->data), static_cast<uchar*>(frame->data) + frame->data_bytes);
     mat = cv::imdecode(mjpegdata, cv::IMREAD_COLOR); // 解码MJPEG数据
+    cv::Size textSize = cv::getTextSize(timestamp, fontFace, fontScale, thickness, &baseline);
+    cv::Point textOrg(mat.cols - textSize.width - 10, textSize.height + 10);
+    // 在图像上添加时间戳
+    cv::putText(mat, timestamp, textOrg, fontFace, fontScale, color, thickness);
+
   } else {
     // 处理其他格式或错误
     std::cerr << "Frame format is not MJPEG!" << std::endl;
