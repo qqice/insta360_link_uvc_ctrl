@@ -6,7 +6,20 @@
 #include <mosquitto.h>
 #include <cstring>
 #include <thread>
+#include <csignal>
 #include <nlohmann/json.hpp>
+
+// 标志变量，用来控制循环
+volatile sig_atomic_t loopFlag = 1;
+
+// 信号处理函数
+void signalHandler(int signal) {
+    if (signal == SIGINT) {
+        // 当接收到SIGINT信号时，修改循环控制变量
+        loopFlag = 0;
+    }
+}
+
 
 // MQTT设置
 const char* MQTT_HOST = "127.0.0.1"; // MQTT代理服务器地址
@@ -250,6 +263,9 @@ int main(int argc, char **argv) {
   uvc_stream_ctrl_t ctrl;
   uvc_error_t res;
 
+  // 注册信号处理函数
+  signal(SIGINT, signalHandler);
+  
   // 初始化mosquitto库
   mosquitto_lib_init();
 
@@ -356,8 +372,11 @@ int main(int argc, char **argv) {
         } else {
           puts("Streaming...");
 
-          sleep(600); /* stream for 10 minutes */
+          // sleep(600); /* stream for 10 minutes */
 
+          while (loopFlag) {
+            sleep(1);
+          }
           // 等待MQTT线程结束（在这个示例中，线程将无限循环，因此下面的join调用实际上会阻塞）
           // mqtt_thread.join();
           
