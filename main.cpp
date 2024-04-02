@@ -1,4 +1,4 @@
-#include "main.h"
+#include "common.h"
 #include "inference.h"
 #include "uvc_ctrl.h"
 #include "opencv.h"
