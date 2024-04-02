@@ -1,4 +1,8 @@
 #include <opencv2/opencv.hpp>
+#include <cstdio>
+#include <unistd.h>
+#include <iostream>
+#include <cstring>
 
 // 设置字体和颜色
 int fontFace = cv::FONT_HERSHEY_SIMPLEX;

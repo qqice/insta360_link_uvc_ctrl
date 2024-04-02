@@ -1,6 +1,9 @@
 #include <nlohmann/json.hpp>
 #include <mosquitto.h>
-#include "common.h"
+#include <cstdio>
+#include <unistd.h>
+#include <iostream>
+#include <cstring>
 
 // MQTT设置
 const char* MQTT_HOST = "127.0.0.1"; // MQTT代理服务器地址

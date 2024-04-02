@@ -32,7 +32,6 @@ find_package(libuvc REQUIRED)
 
 set(PROJECT_SOURCES
     main.cpp
-    common.h
     inference.h
     inference.cpp
     uvc_ctrl.h
