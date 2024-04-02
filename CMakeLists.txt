@@ -30,8 +30,15 @@ find_package(libuvc REQUIRED)
 # 指定头文件路径
 #include_directories(${LIBUVC_INCLUDE_DIR})
 
+set(PROJECT_SOURCES
+    main.cpp
+
+    inference.h
+    inference.cpp
+)
+
 # 定义可执行文件
-add_executable(UVCCapture main.cpp)
+add_executable(UVCCapture ${PROJECT_SOURCES})
 
 # 链接OpenCV和libuvc库
 target_link_libraries(UVCCapture ${OpenCV_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
