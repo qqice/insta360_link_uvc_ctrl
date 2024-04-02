@@ -1,5 +1,4 @@
 #include <libuvc/libuvc.h>
-#include "common.h"
 
 uvc_device_handle_t *devh;
 
