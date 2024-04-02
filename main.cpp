@@ -1,10 +1,4 @@
-#include <cstdio>
-#include <unistd.h>
-#include <iostream>
-#include <cstring>
-#include <thread>
-#include <csignal>
-
+#include "common.h"
 #include "inference.h"
 #include "uvc_ctrl.h"
 #include "opencv.h"
