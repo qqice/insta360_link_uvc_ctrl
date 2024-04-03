@@ -11,7 +11,6 @@ find_package(Threads REQUIRED)
 
 # 寻找OpenCV库
 find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
 
 # 寻找libmosquitto库
 find_package(PkgConfig REQUIRED)
@@ -19,6 +18,9 @@ pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquitto REQUIRED)
 
 # 寻找nlohmann_json库
 find_package(nlohmann_json REQUIRED)
+
+# set(POCO_LIBS PocoNetSSL PocoNet PocoCrypto PocoUtil PocoJSON PocoXML PocoFoundation)
+
 
 # 添加libuvc的头文件和库路径
 # 假设libuvc已经安装在默认的系统库路径中
@@ -29,6 +31,8 @@ set(libuvc_DIR /usr/local/lib/cmake/libuvc)
 find_package(libuvc REQUIRED)
 # 指定头文件路径
 #include_directories(${LIBUVC_INCLUDE_DIR})
+
+include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/cos_include/)
 
 set(PROJECT_SOURCES
     main.cpp
@@ -41,4 +45,4 @@ set(PROJECT_SOURCES
 add_executable(UVCCapture ${PROJECT_SOURCES})
 
 # 链接OpenCV和libuvc库
-target_link_libraries(UVCCapture ${OpenCV_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
+target_link_libraries(UVCCapture ${OpenCV_LIBS} cossdk LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)

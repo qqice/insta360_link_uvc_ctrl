@@ -13,8 +13,18 @@
 
 #include "inference.h"
 
+#include "cos_api.h"
+#include "cos_sys_config.h"
+#include "cos_defines.h"
+
 Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 360), "leaf_disease_classes.txt", runOnGPU);
 Inference tomato_maturity_inf("/home/jetson/tomato_maturity_recognition.onnx", cv::Size(640, 360), "tomato_maturity_classes.txt", runOnGPU);
+
+// 创建配置对象
+qcloud_cos::CosConfig config("./cos_config.json");
+qcloud_cos::CosAPI cos(config);
+// 存储桶名称
+std::string bucket_name = "picgo-1253726783"; 
 
 // 标志变量，用来控制循环
 volatile sig_atomic_t loopFlag = 1;
@@ -52,6 +62,32 @@ cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! nvvidconv
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
 uvc_device_handle_t *devh;
+
+void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
+  // 将 cv::Mat 转换为 vector<uchar>
+  std::vector<uchar> buffer;
+  cv::imencode(".jpg", pic, buffer);
+
+  // 创建内存流
+  std::istringstream iss(std::string(buffer.begin(), buffer.end()));
+
+  // 构造上传请求
+  qcloud_cos::PutObjectByStreamReq req(bucket_name, pic_name, iss);
+
+  // 关闭 MD5 校验(可选)
+  req.TurnOffComputeConentMd5();
+
+  // 执行上传
+  qcloud_cos::PutObjectByStreamResp resp;
+  qcloud_cos::CosResult result = cos.PutObject(req, &resp);
+
+  // 检查结果
+  if (result.IsSucc()) {
+    std::cout << "Upload success" << std::endl;
+  } else {
+    std::cerr << "Upload failed, error message: " << result.GetErrMsg() << std::endl;
+  }
+}
 
 void run_leaf_disease_inf(cv::Mat inf_frame) {
   std::vector<Detection> output = leaf_disease_inf.runInference(inf_frame);
