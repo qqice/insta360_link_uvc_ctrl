@@ -17,12 +17,13 @@
 #include "cos_sys_config.h"
 #include "cos_defines.h"
 
+#define runOnGPU true
 Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 360), "leaf_disease_classes.txt", runOnGPU);
 Inference tomato_maturity_inf("/home/jetson/tomato_maturity_recognition.onnx", cv::Size(640, 360), "tomato_maturity_classes.txt", runOnGPU);
 
 // 创建配置对象
 qcloud_cos::CosConfig config("./cos_config.json");
-qcloud_cos::CosAPI cos(config);
+qcloud_cos::CosAPI tcos(config);
 // 存储桶名称
 std::string bucket_name = "picgo-1253726783"; 
 
@@ -79,13 +80,13 @@ void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
 
   // 执行上传
   qcloud_cos::PutObjectByStreamResp resp;
-  qcloud_cos::CosResult result = cos.PutObject(req, &resp);
+  qcloud_cos::CosResult result = tcos.PutObject(req, &resp);
 
   // 检查结果
   if (result.IsSucc()) {
     std::cout << "Upload success" << std::endl;
   } else {
-    std::cerr << "Upload failed, error message: " << result.GetErrMsg() << std::endl;
+    std::cerr << "Upload failed, error message: " << result.GetErrorMsg() << std::endl;
   }
 }
 
@@ -271,12 +272,12 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
             case 4:
               set_camera_gimbal_location(devh,jsonParsed["horizontal_location"].get<int>(),jsonParsed["vertical_location"].get<int>(),jsonParsed["zoom"].get<int>());
               break;
-            case 5:
-              run_leaf_disease_inf();
-              break;
-            case 6:
-              run_tomato_maturity_inf();
-              break;
+            // case 5:
+            //   run_leaf_disease_inf();
+            //   break;
+            // case 6:
+            //   run_tomato_maturity_inf();
+            //   break;
             default:
               std::cerr << "Unknown control command: " << jsonParsed["control"] << std::endl;
               break;
