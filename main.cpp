@@ -11,6 +11,11 @@
 #include <sstream>
 #include <nlohmann/json.hpp>
 
+#include "inference.h"
+
+Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 360), "leaf_disease_classes.txt", runOnGPU);
+Inference tomato_maturity_inf("/home/jetson/tomato_maturity_recognition.onnx", cv::Size(640, 360), "tomato_maturity_classes.txt", runOnGPU);
+
 // 标志变量，用来控制循环
 volatile sig_atomic_t loopFlag = 1;
 
@@ -47,6 +52,34 @@ cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! nvvidconv
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
 uvc_device_handle_t *devh;
+
+void run_leaf_disease_inf(cv::Mat inf_frame) {
+  std::vector<Detection> output = leaf_disease_inf.runInference(inf_frame);
+
+  int detections = output.size();
+  std::cout << "Number of detections:" << detections << std::endl;
+
+  for (int i = 0; i < detections; ++i)
+  {
+    Detection detection = output[i];
+
+    cv::Rect box = detection.box;
+    cv::Scalar color = detection.color;
+
+    // Detection box
+    cv::rectangle(inf_frame, box, color, 2);
+
+    // Detection box text
+    std::string classString = detection.className + ' ' + std::to_string(detection.confidence).substr(0, 4);
+    cv::Size textSize = cv::getTextSize(classString, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
+    cv::Rect textBox(box.x, box.y - 40, textSize.width + 10, textSize.height + 20);
+
+    cv::rectangle(inf_frame, textBox, color, cv::FILLED);
+    cv::putText(inf_frame, classString, cv::Point(box.x + 5, box.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
+  }
+
+  cv::imwrite("leaf_disease_detection.jpg", inf_frame);
+}
 
 void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char horizontal_speed,const char vertical_direction,const char vertical_speed) {
   int res;
@@ -185,13 +218,6 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
     
             // 访问解析后的JSON数据
             std::cout << "control: " << jsonParsed["control"].get<int>() << std::endl;
-            // std::cout << "zoom: " << jsonParsed["zoom"].get<int>() << std::endl;
-            // std::cout << "horizontal_direction: " << jsonParsed["horizontal_direction"].get<int>() << std::endl;
-            // std::cout << "horizontal_speed: " << jsonParsed["horizontal_speed"].get<int>() << std::endl;
-            // std::cout << "vertical_direction: " << jsonParsed["vertical_direction"].get<int>() << std::endl;
-            // std::cout << "vertical_speed: " << jsonParsed["vertical_speed"].get<int>() << std::endl;
-            // std::cout << "horizontal_location: " << jsonParsed["horizontal_location"].get<int>() << std::endl;
-            // std::cout << "vertical_location: " << jsonParsed["vertical_location"].get<int>() << std::endl;
             switch (jsonParsed["control"].get<int>())
             {
             case 0:
@@ -208,6 +234,12 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
               break;
             case 4:
               set_camera_gimbal_location(devh,jsonParsed["horizontal_location"].get<int>(),jsonParsed["vertical_location"].get<int>(),jsonParsed["zoom"].get<int>());
+              break;
+            case 5:
+              run_leaf_disease_inf();
+              break;
+            case 6:
+              run_tomato_maturity_inf();
               break;
             default:
               std::cerr << "Unknown control command: " << jsonParsed["control"] << std::endl;
@@ -276,7 +308,6 @@ void cb(uvc_frame_t *frame, void *ptr) {
     // 显示图像
     out.write(mat);
     std::cout << "write frame to server" << std::endl;
-    // cv::imshow("UVC Test", mat);
     // 等待1ms，以便OpenCV可以处理事件
     cv::waitKey(1);
   } else {
