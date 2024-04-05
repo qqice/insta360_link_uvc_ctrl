@@ -24,8 +24,22 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
 
+    // for (int i = 0; i < outputs.size(); ++i) {
+    //     cv::Mat mat = outputs[i];
+    //     std::cout << "Matrix " << i << ":\n";
+    //     for (int row = 0; row < mat.size[1]; ++row) {
+    //         for (int col = 0; col < mat.size[2]; ++col) {
+    //             std::cout << mat.at<float>(0, row, col) << " ";
+    //         }
+    //         std::cout << "\n";
+    //     }
+    //     std::cout << "\n";
+    // }
+
     int rows = outputs[0].size[1];
     int dimensions = outputs[0].size[2];
+
+    // std::cout << "rows: " << rows << " dimensions: " << dimensions << std::endl;
 
     bool yolov8 = false;
     // yolov5 has an output of shape (batchSize, 25200, 85) (Num classes + box[x,y,w,h] + confidence[c])
@@ -43,6 +57,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
 
     float x_factor = modelInput.cols / modelShape.width;
     float y_factor = modelInput.rows / modelShape.height;
+    // std::cout << "x_factor: " << x_factor << " y_factor: " << y_factor << std::endl;
 
     std::vector<int> class_ids;
     std::vector<float> confidences;
@@ -53,15 +68,15 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
         if (yolov8)
         {
             float *classes_scores = data+4;
-
+            
             cv::Mat scores(1, classes.size(), CV_32FC1, classes_scores);
             cv::Point class_id;
             double maxClassScore;
 
             minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
-
             if (maxClassScore > modelScoreThreshold)
             {
+                // std::cout << "maxClassScore: " << maxClassScore << std::endl;
                 confidences.push_back(maxClassScore);
                 class_ids.push_back(class_id.x);
 
@@ -69,13 +84,13 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
                 float y = data[1];
                 float w = data[2];
                 float h = data[3];
-
+                // std::cout << "x: " << x << " y: " << y << " w: " << w << " h: " << h << std::endl;
                 int left = int((x - 0.5 * w) * x_factor);
                 int top = int((y - 0.5 * h) * y_factor);
 
                 int width = int(w * x_factor);
                 int height = int(h * y_factor);
-
+                // std::cout << "left: " << left << " top: " << top << " width: " << width << " height: " << height << std::endl;
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
         }

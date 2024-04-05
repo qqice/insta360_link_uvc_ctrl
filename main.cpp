@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 #include <mosquitto.h>
 #include <cstring>
@@ -17,8 +18,16 @@
 #include "cos_sys_config.h"
 #include "cos_defines.h"
 
+#include <atomic>
+
+std::atomic<bool> need_inference(false);
+std::atomic<bool> frame_available(false);
+std::mutex frame_mutex;
+cv::Mat current_frame;
+std::string current_name = "";
+
 #define runOnGPU true
-Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 360), "leaf_disease_classes.txt", runOnGPU);
+Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 640), "/home/jetson/leaf_disease_classes.txt", runOnGPU);
 //Inference tomato_maturity_inf("/home/jetson/tomato_maturity_recognition.onnx", cv::Size(640, 360), "tomato_maturity_classes.txt", runOnGPU);
 
 // 创建配置对象
@@ -63,6 +72,14 @@ cv::VideoWriter out("appsrc ! videoconvert ! video/x-raw,format=I420 ! nvvidconv
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
 uvc_device_handle_t *devh;
+enum mqtt_ctrl_command {
+    CAMERA_GIMBAL_CONTROL = 0,
+    CAMERA_GIMBAL_STOP = 1,
+    CAMERA_GIMBAL_CENTER = 2,
+    CAMERA_ZOOM = 3,
+    CAMERA_GIMBAL_LOCATION = 4,
+    LEAF_DISEASE_INFERENCE = 5
+};
 
 void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
   // 将 cv::Mat 转换为 vector<uchar>
@@ -77,6 +94,7 @@ void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
 
   // 关闭 MD5 校验(可选)
   req.TurnOffComputeConentMd5();
+  req.SetXCosAcl("public-read");
 
   // 执行上传
   qcloud_cos::PutObjectByStreamResp resp;
@@ -84,38 +102,64 @@ void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
 
   // 检查结果
   if (result.IsSucc()) {
-    std::cout << "Upload success" << std::endl;
+    std::cout << "Upload success with file name: " << pic_name << std::endl;
   } else {
     std::cerr << "Upload failed, error message: " << result.GetErrorMsg() << std::endl;
   }
 }
 
-void run_leaf_disease_inf(cv::Mat inf_frame) {
-  std::vector<Detection> output = leaf_disease_inf.runInference(inf_frame);
+void inference_thread() {
+    while (true) {
+        if (need_inference.load()) { // 收到"推理"请求
+            std::cout << "Inference_thread received inference request" << std::endl;
+            if (frame_available.load()) { // 检查帧可用标志
+              cv::Mat inf_frame;
+              {
+                  std::lock_guard<std::mutex> lock(frame_mutex);
+                  inf_frame = current_frame.clone(); // 获取当前帧副本
+              }
+              frame_available.store(false); // 重置帧可用标志
+              if (!inf_frame.empty()) {
+                std::cout << "Start inference" << std::endl;
+                //输出推理图像大小
+                std::cout << "Inference image size: " << inf_frame.size() << std::endl;
+                // cv::Mat resized_frame;
+                // cv::resize(inf_frame, resized_frame, cv::Size(640, 640), cv::INTER_LINEAR);
+                std::vector<Detection> output = leaf_disease_inf.runInference(inf_frame);
 
-  int detections = output.size();
-  std::cout << "Number of detections:" << detections << std::endl;
+                int detections = output.size();
+                std::cout << "Number of detections:" << detections << std::endl;
 
-  for (int i = 0; i < detections; ++i)
-  {
-    Detection detection = output[i];
+                for (int i = 0; i < detections; ++i)
+                {
+                  Detection detection = output[i];
 
-    cv::Rect box = detection.box;
-    cv::Scalar color = detection.color;
+                  cv::Rect box = detection.box;
+                  cv::Scalar color = detection.color;
 
-    // Detection box
-    cv::rectangle(inf_frame, box, color, 2);
+                  // Detection box
+                  cv::rectangle(inf_frame, box, color, 2);
 
-    // Detection box text
-    std::string classString = detection.className + ' ' + std::to_string(detection.confidence).substr(0, 4);
-    cv::Size textSize = cv::getTextSize(classString, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
-    cv::Rect textBox(box.x, box.y - 40, textSize.width + 10, textSize.height + 20);
+                  // Detection box text
+                  std::string classString = detection.className + ' ' + std::to_string(detection.confidence).substr(0, 4);
+                  std::cout << classString << std::endl;
+                  std::cout << "Detection box: " << box.x << " " <<box.y << std::endl;
+                  cv::Size textSize = cv::getTextSize(classString, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
+                  cv::Rect textBox(box.x, box.y - 40, textSize.width + 10, textSize.height + 20);
 
-    cv::rectangle(inf_frame, textBox, color, cv::FILLED);
-    cv::putText(inf_frame, classString, cv::Point(box.x + 5, box.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
-  }
-
-  cv::imwrite("leaf_disease_detection.jpg", inf_frame);
+                  cv::rectangle(inf_frame, textBox, color, cv::FILLED);
+                  cv::putText(inf_frame, classString, cv::Point(box.x + 5, box.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
+                }
+                std::cout << "Inference finished" << std::endl;
+                upload_pic_to_tencent_cos(inf_frame,current_name);
+              }
+            }
+            need_inference.store(false); // 重置"推理"请求状态
+        }
+        // 若没有"推理"请求,则等待一段时间
+        // std::cout << "Waiting for inference request" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 }
 
 void set_camera_gimbal_control(uvc_device_handle_t *devh,const char horizontal_direction,const char horizontal_speed,const char vertical_direction,const char vertical_speed) {
@@ -272,9 +316,13 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
             case 4:
               set_camera_gimbal_location(devh,jsonParsed["horizontal_location"].get<int>(),jsonParsed["vertical_location"].get<int>(),jsonParsed["zoom"].get<int>());
               break;
-            // case 5:
-            //   run_leaf_disease_inf();
-            //   break;
+            case 5:
+              {
+                std::cout << "Received leaf disease inference request" << std::endl;
+                need_inference.store(true);
+                current_name = jsonParsed["name"];
+                break;
+              }
             // case 6:
             //   run_tomato_maturity_inf();
             //   break;
@@ -340,9 +388,12 @@ void cb(uvc_frame_t *frame, void *ptr) {
     std::cerr << "Frame format is not MJPEG!" << std::endl;
     return;
   }
+
   // 显示图像
   if (!mat.empty()) {
     // 显示图像
+    std::lock_guard<std::mutex> lock(frame_mutex);
+    current_frame = mat.clone(); // 更新当前帧
     out.write(mat);
     std::cout << "write frame to server" << std::endl;
     // 等待1ms，以便OpenCV可以处理事件
@@ -350,7 +401,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
   } else {
     std::cerr << "Could not decode MJPEG frame!" << std::endl;
   }
-
+  frame_available.store(true); // 设置帧可用标志
   uvc_free_frame(bgr);
 }
 
@@ -387,7 +438,8 @@ int main(int argc, char **argv) {
 
   // 创建并启动处理MQTT消息的线程
   std::thread mqtt_thread(mqtt_loop, mosq);
-
+  // 创建并启动推理线程
+  std::thread inf_thread(inference_thread);
   /* Initialize a UVC service context. Libuvc will set up its own libusb
    * context. Replace NULL with a libusb_context pointer to run libuvc
    * from an existing libusb context. */

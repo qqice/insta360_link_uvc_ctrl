@@ -45,6 +45,7 @@ set(PROJECT_SOURCES
 
 # 定义可执行文件
 add_executable(UVCCapture ${PROJECT_SOURCES})
-
+add_executable(inf_example inf_example.cpp inference.cpp inference.h)
 # 链接OpenCV和libuvc库
 target_link_libraries(UVCCapture ${OpenCV_LIBS} cossdk ${POCO_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
+target_link_libraries(inf_example ${OpenCV_LIBS})
