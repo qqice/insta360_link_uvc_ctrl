@@ -7,7 +7,5 @@ opencv_for_arm64:https://github.com/Qengineering/Install-OpenCV-Raspberry-Pi-64-
 
 opencv_for_jetson:https://github.com/Qengineering/Install-OpenCV-Jetson-Nano
 
-tencent_cos:https://github.com/tencentyun/cos-cpp-sdk-v5
-
 sudo apt install gstreamer1.0-rtsp libmosquitto-dev nlohmann-json3-dev
 

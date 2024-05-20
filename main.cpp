@@ -14,10 +14,6 @@
 
 #include "inference.h"
 
-#include "cos_api.h"
-#include "cos_sys_config.h"
-#include "cos_defines.h"
-
 #include <atomic>
 
 std::atomic<bool> need_inference(false);
@@ -29,12 +25,6 @@ std::string current_name = "";
 #define runOnGPU true
 Inference leaf_disease_inf("/home/jetson/leaf_disease_detection.onnx", cv::Size(640, 640), "/home/jetson/leaf_disease_classes.txt", runOnGPU);
 //Inference tomato_maturity_inf("/home/jetson/tomato_maturity_recognition.onnx", cv::Size(640, 360), "tomato_maturity_classes.txt", runOnGPU);
-
-// 创建配置对象
-qcloud_cos::CosConfig config("./cos_config.json");
-qcloud_cos::CosAPI tcos(config);
-// 存储桶名称
-std::string bucket_name = "picgo-1253726783"; 
 
 // 标志变量，用来控制循环
 volatile sig_atomic_t loopFlag = 1;
@@ -81,33 +71,6 @@ enum mqtt_ctrl_command {
     LEAF_DISEASE_INFERENCE = 5
 };
 
-void upload_pic_to_tencent_cos(cv::Mat pic, std::string pic_name) {
-  // 将 cv::Mat 转换为 vector<uchar>
-  std::vector<uchar> buffer;
-  cv::imencode(".jpg", pic, buffer);
-
-  // 创建内存流
-  std::istringstream iss(std::string(buffer.begin(), buffer.end()));
-
-  // 构造上传请求
-  qcloud_cos::PutObjectByStreamReq req(bucket_name, pic_name, iss);
-
-  // 关闭 MD5 校验(可选)
-  req.TurnOffComputeConentMd5();
-  req.SetXCosAcl("public-read");
-
-  // 执行上传
-  qcloud_cos::PutObjectByStreamResp resp;
-  qcloud_cos::CosResult result = tcos.PutObject(req, &resp);
-
-  // 检查结果
-  if (result.IsSucc()) {
-    std::cout << "Upload success with file name: " << pic_name << std::endl;
-  } else {
-    std::cerr << "Upload failed, error message: " << result.GetErrorMsg() << std::endl;
-  }
-}
-
 void inference_thread() {
     while (true) {
         if (need_inference.load()) { // 收到"推理"请求
@@ -151,7 +114,6 @@ void inference_thread() {
                   cv::putText(inf_frame, classString, cv::Point(box.x + 5, box.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
                 }
                 std::cout << "Inference finished" << std::endl;
-                upload_pic_to_tencent_cos(inf_frame,current_name);
               }
             }
             need_inference.store(false); // 重置"推理"请求状态
