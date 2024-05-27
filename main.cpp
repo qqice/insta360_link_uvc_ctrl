@@ -11,7 +11,9 @@
 #include <ctime>
 #include <sstream>
 #include <nlohmann/json.hpp>
-
+#include <alsa/asoundlib.h>
+#include <gst/gst.h>
+#include <gst/app/gstappsrc.h>
 #include "inference.h"
 
 #include <atomic>
@@ -39,29 +41,30 @@ void signalHandler(int signal) {
 
 // 设置字体和颜色
 int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+
 double fontScale = 1;
 int thickness = 2;
 cv::Scalar color(255, 255, 255); // 白色
-
 // 计算文本宽度和高度，以便将其放置在右上角
 int baseline = 0;
 
 // MQTT设置
 const char* MQTT_HOST = "127.0.0.1"; // MQTT代理服务器地址
+
 const int MQTT_PORT = 1883; // MQTT端口
 const char* MQTT_TOPIC = "camera/control"; // 订阅的主题
-
 int width = 1920;
+
 int height = 1080;
 int fps = 30;
 const int bitrate = 3000000;
 const char* rtsp_server = "rtsp://127.0.0.1:8554/mystream";
-
 cv::VideoWriter out("appsrc ! videoconvert ! mpph264enc level=40 bps="+ std::to_string(bitrate) +
               " ! queue ! rtspclientsink location=" + rtsp_server,
               cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
 uvc_device_handle_t *devh;
+
 enum mqtt_ctrl_command {
     CAMERA_GIMBAL_CONTROL = 0,
     CAMERA_GIMBAL_STOP = 1,
@@ -70,6 +73,96 @@ enum mqtt_ctrl_command {
     CAMERA_GIMBAL_LOCATION = 4,
     LEAF_DISEASE_INFERENCE = 5
 };
+
+GstElement *pipeline = gst_parse_launch("appsrc name=audio_src ! audioconvert ! voaacenc ! queue ! flvmux name=mux ! rtspclientsink location=rtsp://127.0.0.1:8554/mystream", NULL);
+GstElement *appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "audio_src");
+
+void *audio_thread_func(void *arg) {
+    int err;
+    char *buffer;
+    int buffer_frames = 128;
+    unsigned int rate = 44100;
+    snd_pcm_t *capture_handle;
+    snd_pcm_hw_params_t *hw_params;
+    snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
+
+    if ((err = snd_pcm_open(&capture_handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+        fprintf(stderr, "cannot open audio device %s (%s)\n",
+                "default",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
+        fprintf(stderr, "cannot allocate hardware parameter structure (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_any(capture_handle, hw_params)) < 0) {
+        fprintf(stderr, "cannot initialize hardware parameter structure (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_set_access(capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+        fprintf(stderr, "cannot set access type (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_set_format(capture_handle, hw_params, format)) < 0) {
+        fprintf(stderr, "cannot set sample format (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &rate, 0)) < 0) {
+        fprintf(stderr, "cannot set sample rate (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 2)) < 0) {
+        fprintf(stderr, "cannot set channel count (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    if ((err = snd_pcm_hw_params(capture_handle, hw_params)) < 0) {
+        fprintf(stderr, "cannot set parameters (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    snd_pcm_hw_params_free(hw_params);
+
+    if ((err = snd_pcm_prepare(capture_handle)) < 0) {
+        fprintf(stderr, "cannot prepare audio interface for use (%s)\n",
+                snd_strerror(err));
+        exit(1);
+    }
+
+    buffer = (char *)malloc(buffer_frames * snd_pcm_format_width(format) / 8 * 2);
+
+    while (true) {
+        if ((err = snd_pcm_readi(capture_handle, buffer, buffer_frames)) != buffer_frames) {
+            fprintf(stderr, "read from audio interface failed (%s)\n",
+                    snd_strerror(err));
+            exit(1);
+        }
+
+        // 将音频数据推送到GStreamer管道
+        GstBuffer *gst_buffer = gst_buffer_new_allocate(NULL, buffer_frames * 2, NULL);
+        gst_buffer_fill(gst_buffer, 0, buffer, buffer_frames * 2);
+        gst_app_src_push_buffer(GST_APP_SRC(appsrc), gst_buffer);
+    }
+
+    free(buffer);
+
+    snd_pcm_close(capture_handle);
+    return 0;
+}
 
 //void inference_thread() {
 //    while (true) {
@@ -357,7 +450,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
     std::lock_guard<std::mutex> lock(frame_mutex);
     current_frame = mat.clone(); // 更新当前帧
     out.write(mat);
-    std::cout << "write frame to server" << std::endl;
+    //std::cout << "write frame to server" << std::endl;
     // 等待1ms，以便OpenCV可以处理事件
     cv::waitKey(1);
   } else {
@@ -408,7 +501,7 @@ int main(int argc, char **argv) {
 
   // 创建并启动处理MQTT消息的线程
   std::thread mqtt_thread(mqtt_loop, mosq);
-
+  std::thread audio_thread(audio_thread_func, nullptr);
   // 创建并启动推理线程
   //std::thread inf_thread(inference_thread);
 
