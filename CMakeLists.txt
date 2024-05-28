@@ -32,9 +32,9 @@ find_package(libuvc REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 set(PROJECT_SOURCES
-    main.cpp
-    inference.h
-    inference.cpp
+        main.cpp
+        inference.h
+        inference.cpp
 )
 
 # 定义可执行文件
