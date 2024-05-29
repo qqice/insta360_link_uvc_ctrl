@@ -56,9 +56,11 @@ int height = 1080;
 int fps = 30;
 const int bitrate = 3000000;
 const char *rtsp_server = "rtsp://127.0.0.1:8554/mystream";
+const char *audio_device = "hw:5,0";
+const char *audio_encoder = "opusenc";
 
 cv::VideoWriter out("appsrc ! videoconvert ! mpph264enc level=40 bps=" + std::to_string(bitrate) +
-                    " ! queue ! s.sink_0 alsasrc device=\"hw:5,0\" ! queue ! audioconvert ! voaacenc ! s.sink_1 rtspclientsink name=s location=" +
+                    " ! queue ! s.sink_0 alsasrc device=" + audio_device + " ! queue ! audioconvert ! " + audio_encoder + " ! s.sink_1 rtspclientsink name=s location=" +
                     rtsp_server,
                     cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
