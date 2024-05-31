@@ -3,9 +3,10 @@
 #include <cstring>
 #include <thread>
 #include <csignal>
-#include "../include/mqtt_utils.h"
-#include "../include/uvc_utils.h"
-#include "../include/inference.h"
+#include "mqtt_utils.h"
+#include "uvc_utils.h"
+#include "inference.h"
+#include "realsense_utils.h"
 
 
 // 标志变量，用来控制循环
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
 
     // 创建并启动处理MQTT消息的线程
     std::thread mqtt_thread(mqtt_loop, mosq);
-
+    std::thread realsense_thread(realsense_loop);
     // 创建并启动推理线程
     //std::thread inf_thread(inference_thread);
 

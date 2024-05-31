@@ -1,4 +1,4 @@
-#include "../include/uvc_utils.h"
+#include "uvc_utils.h"
 
 int width = 1920;
 int height = 1080;

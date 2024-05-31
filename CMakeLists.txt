@@ -41,6 +41,8 @@ set(PROJECT_SOURCES
         src/mqtt_utils.cpp
         include/uvc_utils.h
         src/uvc_utils.cpp
+        include/realsense_utils.h
+        src/realsense_utils.cpp
 )
 
 # 定义可执行文件
