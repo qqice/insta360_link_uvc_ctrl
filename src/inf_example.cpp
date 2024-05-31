@@ -4,7 +4,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "inference.h"
+#include "../include/inference.h"
 
 using namespace std;
 using namespace cv;

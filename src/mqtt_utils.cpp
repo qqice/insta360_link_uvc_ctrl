@@ -1,5 +1,5 @@
-#include "mqtt_utils.h"
-#include "uvc_utils.h"
+#include "../include/mqtt_utils.h"
+#include "../include/uvc_utils.h"
 #include <nlohmann/json.hpp>
 
 // MQTT设置

@@ -19,6 +19,8 @@ pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquitto REQUIRED)
 # 寻找nlohmann_json库
 find_package(nlohmann_json REQUIRED)
 
+# 寻找realsense2库
+find_package(realsense2 REQUIRED)
 
 # 添加libuvc的头文件和库路径
 # 假设libuvc已经安装在默认的系统库路径中
@@ -30,20 +32,20 @@ find_package(libuvc REQUIRED)
 # 指定头文件路径
 #include_directories(${LIBUVC_INCLUDE_DIR})
 
-include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS} include ${realsense_INCLUDE_DIR})
 set(PROJECT_SOURCES
-        main.cpp
-        inference.h
-        inference.cpp
-        mqtt_utils.h
-        mqtt_utils.cpp
-        uvc_utils.h
-        uvc_utils.cpp
+        src/main.cpp
+        include/inference.h
+        src/inference.cpp
+        include/mqtt_utils.h
+        src/mqtt_utils.cpp
+        include/uvc_utils.h
+        src/uvc_utils.cpp
 )
 
 # 定义可执行文件
 add_executable(UVCCapture ${PROJECT_SOURCES})
-add_executable(inf_example inf_example.cpp inference.cpp inference.h)
+add_executable(inf_example src/inf_example.cpp src/inference.cpp include/inference.h)
 # 链接OpenCV和libuvc库
-target_link_libraries(UVCCapture ${OpenCV_LIBS} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
+target_link_libraries(UVCCapture ${OpenCV_LIBS} ${realsense2_LIBRARY} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
 target_link_libraries(inf_example ${OpenCV_LIBS})

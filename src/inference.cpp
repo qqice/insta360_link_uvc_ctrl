@@ -1,4 +1,4 @@
-#include "inference.h"
+#include "../include/inference.h"
 
 Inference::Inference(const std::string &onnxModelPath, const cv::Size &modelInputShape, const std::string &classesTxtFile, const bool &runWithCuda)
 {

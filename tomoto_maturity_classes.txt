@@ -1,6 +1,0 @@
-b_fully_ripened
-b_green
-b_half_ripened
-l_fully_ripened
-l_green
-l_half_ripened

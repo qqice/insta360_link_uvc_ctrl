@@ -3,9 +3,9 @@
 #include <cstring>
 #include <thread>
 #include <csignal>
-#include "mqtt_utils.h"
-#include "uvc_utils.h"
-#include "inference.h"
+#include "../include/mqtt_utils.h"
+#include "../include/uvc_utils.h"
+#include "../include/inference.h"
 
 
 // 标志变量，用来控制循环
