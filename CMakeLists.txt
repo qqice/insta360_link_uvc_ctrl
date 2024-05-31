@@ -35,6 +35,10 @@ set(PROJECT_SOURCES
         main.cpp
         inference.h
         inference.cpp
+        mqtt_utils.h
+        mqtt_utils.cpp
+        uvc_utils.h
+        uvc_utils.cpp
 )
 
 # 定义可执行文件

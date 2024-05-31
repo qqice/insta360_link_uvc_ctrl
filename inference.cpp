@@ -53,7 +53,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
         outputs[0] = outputs[0].reshape(1, dimensions);
         cv::transpose(outputs[0], outputs[0]);
     }
-    float *data = (float *)outputs[0].data;
+    auto *data = (float *)outputs[0].data;
 
     float x_factor = modelInput.cols / modelShape.width;
     float y_factor = modelInput.rows / modelShape.height;
@@ -73,7 +73,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
             cv::Point class_id;
             double maxClassScore;
 
-            minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
+            minMaxLoc(scores, nullptr, &maxClassScore, nullptr, &class_id);
             if (maxClassScore > modelScoreThreshold)
             {
                 // std::cout << "maxClassScore: " << maxClassScore << std::endl;
@@ -91,7 +91,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
                 int width = int(w * x_factor);
                 int height = int(h * y_factor);
                 // std::cout << "left: " << left << " top: " << top << " width: " << width << " height: " << height << std::endl;
-                boxes.push_back(cv::Rect(left, top, width, height));
+                boxes.emplace_back(left, top, width, height);
             }
         }
         else // yolov5
@@ -106,7 +106,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
                 cv::Point class_id;
                 double max_class_score;
 
-                minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
+                minMaxLoc(scores, nullptr, &max_class_score, nullptr, &class_id);
 
                 if (max_class_score > modelScoreThreshold)
                 {
@@ -124,7 +124,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
                     int width = int(w * x_factor);
                     int height = int(h * y_factor);
 
-                    boxes.push_back(cv::Rect(left, top, width, height));
+                    boxes.emplace_back(left, top, width, height);
                 }
             }
         }
@@ -136,10 +136,8 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
     cv::dnn::NMSBoxes(boxes, confidences, modelScoreThreshold, modelNMSThreshold, nms_result);
 
     std::vector<Detection> detections{};
-    for (unsigned long i = 0; i < nms_result.size(); ++i)
+    for (int idx : nms_result)
     {
-        int idx = nms_result[i];
-
         Detection result;
         result.class_id = class_ids[idx];
         result.confidence = confidences[idx];
