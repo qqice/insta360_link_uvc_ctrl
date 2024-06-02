@@ -126,8 +126,8 @@ int main(int argc, char **argv) {
         spdlog::error("uvc_init failed");
         return res;
     }
-
-    puts("UVC initialized");
+=
+    spdlog::info("UVC initialized");
 
     /* Locates the first attached UVC device, stores in dev */
     res = uvc_find_device(
@@ -145,7 +145,6 @@ int main(int argc, char **argv) {
         if (res < 0) {
             spdlog::error("uvc_open failed");
         } else {
-            puts("Device opened");
             spdlog::info("Device opened");
 
             /* Print out a message containing all the information that libuvc
