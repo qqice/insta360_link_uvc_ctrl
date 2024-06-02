@@ -1,9 +1,13 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.21)
 project(UVCCapture)
 
 # 设置C++标准
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+include_directories(include)
+
+add_subdirectory(utils)
 
 # 寻找线程库
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -25,17 +29,15 @@ find_package(realsense2 REQUIRED)
 # 寻找spdlog库
 find_package(spdlog REQUIRED)
 
+# 寻找bytetrack库
+find_package(bytetrack REQUIRED)
+
 # 添加libuvc的头文件和库路径
-# 假设libuvc已经安装在默认的系统库路径中
-# 如果不是这样，您可能需要指定include_directories和link_directories
-#find_path(LIBUVC_INCLUDE_DIR NAMES libuvc/libuvc.h)
-#find_library(LIBUVC_LIBRARY NAMES uvc)
 set(libuvc_DIR /usr/local/lib/cmake/libuvc)
 find_package(libuvc REQUIRED)
-# 指定头文件路径
-#include_directories(${LIBUVC_INCLUDE_DIR})
 
-include_directories(${OpenCV_INCLUDE_DIRS} include ${realsense_INCLUDE_DIR})
+
+include_directories(${OpenCV_INCLUDE_DIRS} ${realsense_INCLUDE_DIR})
 set(PROJECT_SOURCES
         src/main.cpp
         include/mqtt_utils.h
@@ -44,10 +46,29 @@ set(PROJECT_SOURCES
         src/uvc_utils.cpp
         include/realsense_utils.h
         src/realsense_utils.cpp
+        src/inference_utils.cpp
+        include/inference_utils.h
 )
 
-# 定义可执行文件
+
 add_executable(UVCCapture ${PROJECT_SOURCES})
-# 链接OpenCV和libuvc库
-target_link_libraries(UVCCapture ${OpenCV_LIBS} ${realsense2_LIBRARY} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json spdlog::spdlog)
+target_link_libraries(UVCCapture
+        ${OpenCV_LIBS}
+        ${realsense2_LIBRARY}
+        LibUVC::UVCShared
+        PkgConfig::Mosquitto
+        Threads::Threads
+        nlohmann_json::nlohmann_json
+        spdlog::spdlog
+        yolov8_lib
+        ${bytetrack_LIBS}
+)
+
+add_executable(inference_demo src/rknn_inference.cpp)
+target_link_libraries(inference_demo
+        ${OpenCV_LIBS}
+        ${bytetrack_LIBS}
+        spdlog::spdlog
+        yolov8_lib
+)
 

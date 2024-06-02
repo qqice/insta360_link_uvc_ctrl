@@ -7,7 +7,7 @@
 #include "uvc_utils.h"
 #include "realsense_utils.h"
 #include "spdlog/spdlog.h"
-
+#include "inference_utils.h"
 
 // 标志变量，用来控制循环
 volatile sig_atomic_t loopFlag = 1;
@@ -19,62 +19,6 @@ void signalHandler(int signal) {
         loopFlag = 0;
     }
 }
-
-
-//void inference_thread() {
-//    while (true) {
-//        if (need_inference.load()) { // 收到"推理"请求
-//            std::cout << "Inference_thread received inference request" << std::endl;
-//            if (frame_available.load()) { // 检查帧可用标志
-//              cv::Mat inf_frame;
-//              {
-//                  std::lock_guard<std::mutex> lock(frame_mutex);
-//                  inf_frame = current_frame.clone(); // 获取当前帧副本
-//              }
-//              frame_available.store(false); // 重置帧可用标志
-//              if (!inf_frame.empty()) {
-//                std::cout << "Start inference" << std::endl;
-//                //输出推理图像大小
-//                std::cout << "Inference image size: " << inf_frame.size() << std::endl;
-//                // cv::Mat resized_frame;
-//                // cv::resize(inf_frame, resized_frame, cv::Size(640, 640), cv::INTER_LINEAR);
-//                std::vector<Detection> output = leaf_disease_inf.runInference(inf_frame);
-//
-//                int detections = output.size();
-//                std::cout << "Number of detections:" << detections << std::endl;
-//
-//                for (int i = 0; i < detections; ++i)
-//                {
-//                  Detection detection = output[i];
-//
-//                  cv::Rect box = detection.box;
-//                  cv::Scalar color = detection.color;
-//
-//                  // Detection box
-//                  cv::rectangle(inf_frame, box, color, 2);
-//
-//                  // Detection box text
-//                  std::string classString = detection.className + ' ' + std::to_string(detection.confidence).substr(0, 4);
-//                  std::cout << classString << std::endl;
-//                  std::cout << "Detection box: " << box.x << " " <<box.y << std::endl;
-//                  cv::Size textSize = cv::getTextSize(classString, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
-//                  cv::Rect textBox(box.x, box.y - 40, textSize.width + 10, textSize.height + 20);
-//
-//                  cv::rectangle(inf_frame, textBox, color, cv::FILLED);
-//                  cv::putText(inf_frame, classString, cv::Point(box.x + 5, box.y - 10), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 0, 0), 2, 0);
-//                }
-//                std::cout << "Inference finished" << std::endl;
-//              }
-//            }
-//            need_inference.store(false); // 重置"推理"请求状态
-//        }
-//        // 若没有"推理"请求,则等待一段时间
-//        // std::cout << "Waiting for inference request" << std::endl;
-//        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-//    }
-//}
-
-
 
 
 int main(int argc, char **argv) {
@@ -113,9 +57,10 @@ int main(int argc, char **argv) {
 
     // 创建并启动处理MQTT消息的线程
     std::thread mqtt_thread(mqtt_loop, mosq);
+    // 创建并启动Realsense线程
     std::thread realsense_thread(realsense_loop);
     // 创建并启动推理线程
-    //std::thread inf_thread(inference_thread);
+    std::thread inf_thread(inference_thread);
 
     /* Initialize a UVC service context. Libuvc will set up its own libusb
      * context. Replace NULL with a libusb_context pointer to run libuvc

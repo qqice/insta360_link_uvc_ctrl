@@ -1,0 +1,5 @@
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+file(GLOB SRC "*.cpp")
+add_library(yolov8_lib ${SRC})
+target_link_libraries(yolov8_lib ${OpenCV_LIBS} rknnrt)

@@ -1,0 +1,12 @@
+Source: libbytetrack
+Section: misc
+Priority: optional
+Maintainer: Kaylor Chen <kaylor.chen@qq.com>
+Rules-Requires-Root: no
+Build-Depends: debhelper (>= 7.0.0~)
+
+Package: libbytetrack
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libopencv-dev, libeigen3-dev
+Description: bytetrack library
+

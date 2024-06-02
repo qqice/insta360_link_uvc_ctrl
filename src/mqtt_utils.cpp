@@ -42,15 +42,12 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
                                            jsonParsed["vertical_location"].get<int>(), jsonParsed["zoom"].get<int>());
                 break;
             case LEAF_DISEASE_INFERENCE:
-//              {
-//                std::cout << "Received leaf disease inference request" << std::endl;
-//                need_inference.store(true);
-//                current_name = jsonParsed["name"];
-//                break;
-//              }
-                // case 6:
-                //   run_tomato_maturity_inf();
-                //   break;
+              {
+                spdlog::info("Received leaf disease inference request");
+                need_inference.store(true);
+                current_name = jsonParsed["name"];
+                break;
+              }
             default:
                 spdlog::error("Unknown control command: {}", jsonParsed["control"].get<int>());
                 break;
