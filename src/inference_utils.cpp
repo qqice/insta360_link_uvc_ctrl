@@ -32,8 +32,10 @@ void inference_thread() {
                         image_res = rknn_pool->GetImageResultFromQueue();
                     }
                     spdlog::info("Inference finished");
-                    cv::imwrite("result.jpg", *image_res);
-                    spdlog::info("Result saved");
+                    upload_to_CF("result.jpg",*image_res);
+                    spdlog::info("Result uploaded");
+                    // cv::imwrite("result.jpg", *image_res);
+                    // spdlog::info("Result saved");
                 }
             }
             need_inference.store(false); // 重置"推理"请求状态

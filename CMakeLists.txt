@@ -32,12 +32,15 @@ find_package(spdlog REQUIRED)
 # 寻找bytetrack库
 find_package(bytetrack REQUIRED)
 
+# 寻找curl库
+find_package(CURL REQUIRED)
+
 # 添加libuvc的头文件和库路径
 set(libuvc_DIR /usr/local/lib/cmake/libuvc)
 find_package(libuvc REQUIRED)
 
 
-include_directories(${OpenCV_INCLUDE_DIRS} ${realsense_INCLUDE_DIR})
+include_directories(${OpenCV_INCLUDE_DIRS} ${realsense_INCLUDE_DIR} ${CURL_INCLUDE_DIRS})
 set(PROJECT_SOURCES
         src/main.cpp
         include/mqtt_utils.h
@@ -48,6 +51,8 @@ set(PROJECT_SOURCES
         src/realsense_utils.cpp
         src/inference_utils.cpp
         include/inference_utils.h
+        src/upload_utils.cpp
+        include/upload_utils.h
 )
 
 
@@ -62,6 +67,7 @@ target_link_libraries(UVCCapture
         spdlog::spdlog
         yolov8_lib
         ${bytetrack_LIBS}
+        ${CURL_LIBRARIES}
 )
 
 add_executable(inference_demo src/rknn_inference.cpp)

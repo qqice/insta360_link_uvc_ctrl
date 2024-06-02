@@ -10,6 +10,7 @@
 #include "image_process.h"
 #include "spdlog/spdlog.h"
 #include "rknn_pool.h"
+#include "upload_utils.h"
 
 extern std::string model_path;
 extern std::string label_path;
