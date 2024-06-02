@@ -7,6 +7,7 @@
 #include "uvc_utils.h"
 #include "inference.h"
 #include "realsense_utils.h"
+#include "spdlog/spdlog.h"
 
 
 // 标志变量，用来控制循环
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
     // 创建新的mosquitto客户端实例
     struct mosquitto *mosq = mosquitto_new(nullptr, true, nullptr);
     if (!mosq) {
-        std::cerr << "Failed to create mosquitto instance." << std::endl;
+        spdlog::error("Failed to create mosquitto instance.");
         return -1;
     }
 
@@ -104,7 +105,7 @@ int main(int argc, char **argv) {
 
     // 连接到MQTT代理服务器
     if (mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60)) {
-        std::cerr << "Could not connect to MQTT Broker." << std::endl;
+        spdlog::error("Could not connect to MQTT Broker.");
         return -1;
     }
 
@@ -123,7 +124,7 @@ int main(int argc, char **argv) {
     res = uvc_init(&ctx, nullptr);
 
     if (res < 0) {
-        uvc_perror(res, "uvc_init");
+        spdlog::error("uvc_init failed");
         return res;
     }
 
@@ -135,21 +136,22 @@ int main(int argc, char **argv) {
             0x2e1a, 0x4c01, nullptr); /* filter devices: vendor_id, product_id, "serial_num" */
 
     if (res < 0) {
-        uvc_perror(res, "uvc_find_device"); /* no devices found */
+        spdlog::error("uvc_find_device failed");
     } else {
-        puts("Device found");
+        spdlog::info("Device found");
 
         /* Try to open the device: requires exclusive access */
         res = uvc_open(dev, &devh);
 
         if (res < 0) {
-            uvc_perror(res, "uvc_open"); /* unable to open device */
+            spdlog::error("uvc_open failed");
         } else {
             puts("Device opened");
+            spdlog::info("Device opened");
 
             /* Print out a message containing all the information that libuvc
              * knows about the device */
-            uvc_print_diag(devh, stderr);
+            //uvc_print_diag(devh, stderr);
 
             const uvc_format_desc_t *format_desc = uvc_get_format_descs(devh);
             const uvc_frame_desc_t *frame_desc = format_desc->frame_descs;
@@ -173,8 +175,7 @@ int main(int argc, char **argv) {
                 fps = 10000000 / frame_desc->dwDefaultFrameInterval;
             }
 
-            printf("\nFirst format: (%4s) %dx%d %dfps\n", format_desc->fourccFormat, width, height, fps);
-
+            spdlog::debug("First format: ({}) {}x{} {}fps", format_desc->fourccFormat, width, height, fps);
             /* Try to negotiate first stream profile */
             res = uvc_get_stream_ctrl_format_size(
                     devh, &ctrl, /* result stored in ctrl */
@@ -183,10 +184,10 @@ int main(int argc, char **argv) {
             );
 
             /* Print out the result */
-            uvc_print_stream_ctrl(&ctrl, stderr);
+            //uvc_print_stream_ctrl(&ctrl, stderr);
 
             if (res < 0) {
-                uvc_perror(res, "get_mode"); /* device doesn't provide a matching stream */
+                spdlog::error("get_mode failed");
             } else {
                 /* Start the video stream. The library will call user function cb:
                  *   cb(frame, (void *) 12345)
@@ -194,9 +195,9 @@ int main(int argc, char **argv) {
                 res = uvc_start_streaming(devh, &ctrl, cb, (void *) 12345, 0);
 
                 if (res < 0) {
-                    uvc_perror(res, "start_streaming"); /* unable to start stream */
+                    spdlog::error("start_streaming failed");
                 } else {
-                    puts("Streaming...");
+                    spdlog::info("Streaming...");
 
                     // sleep(600); /* stream for 10 minutes */
 
@@ -209,13 +210,13 @@ int main(int argc, char **argv) {
                     /* End the stream. Blocks until last callback is serviced */
                     uvc_stop_streaming(devh);
                     mosquitto_destroy(mosq);
-                    puts("Done streaming.");
+                    spdlog::info("Done streaming.");
                 }
             }
 
             /* Release our handle on the device */
             uvc_close(devh);
-            puts("Device closed");
+            spdlog::info("Device closed");
         }
 
         /* Release the device descriptor */
@@ -225,7 +226,7 @@ int main(int argc, char **argv) {
     /* Close the UVC context. This closes and cleans up any existing device handles,
      * and it closes the libusb context if one was not provided. */
     uvc_exit(ctx);
-    puts("UVC exited");
+    spdlog::info("UVC exited");
     mosquitto_lib_cleanup();
     return 0;
 }

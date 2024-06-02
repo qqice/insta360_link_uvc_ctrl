@@ -22,6 +22,9 @@ find_package(nlohmann_json REQUIRED)
 # 寻找realsense2库
 find_package(realsense2 REQUIRED)
 
+# 寻找spdlog库
+find_package(spdlog REQUIRED)
+
 # 添加libuvc的头文件和库路径
 # 假设libuvc已经安装在默认的系统库路径中
 # 如果不是这样，您可能需要指定include_directories和link_directories
@@ -49,5 +52,5 @@ set(PROJECT_SOURCES
 add_executable(UVCCapture ${PROJECT_SOURCES})
 add_executable(inf_example src/inf_example.cpp src/inference.cpp include/inference.h)
 # 链接OpenCV和libuvc库
-target_link_libraries(UVCCapture ${OpenCV_LIBS} ${realsense2_LIBRARY} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json)
+target_link_libraries(UVCCapture ${OpenCV_LIBS} ${realsense2_LIBRARY} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json spdlog::spdlog)
 target_link_libraries(inf_example ${OpenCV_LIBS})

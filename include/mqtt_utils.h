@@ -4,6 +4,7 @@
 #include <mosquitto.h>
 #include <cstdio>
 #include <iostream>
+#include "spdlog/spdlog.h"
 
 void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message);
 void mqtt_loop(struct mosquitto *mosq);

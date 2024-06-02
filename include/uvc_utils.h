@@ -8,6 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <libuvc/libuvc.h>
+#include "spdlog/spdlog.h"
 extern uvc_device_handle_t *devh;
 void cb(uvc_frame_t *frame, void *ptr);
 void set_camera_gimbal_control(uvc_device_handle_t *deviceHandle, char horizontal_direction, char horizontal_speed,

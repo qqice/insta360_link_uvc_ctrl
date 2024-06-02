@@ -55,7 +55,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
     /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
     bgr = uvc_allocate_frame(frame->width * frame->height * 3);
     if (!bgr) {
-        printf("unable to allocate bgr frame!\n");
+        spdlog::error("unable to allocate bgr frame!");
         return;
     }
 
@@ -75,7 +75,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
 
     } else {
         // 处理其他格式或错误
-        std::cerr << "Frame format is not MJPEG!" << std::endl;
+        spdlog::error("Frame format is not MJPEG!");
         return;
     }
 
@@ -89,7 +89,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
         // 等待1ms，以便OpenCV可以处理事件
         cv::waitKey(1);
     } else {
-        std::cerr << "Could not decode MJPEG frame!" << std::endl;
+        spdlog::error("Could not decode MJPEG frame!");
     }
     frame_available.store(true); // 设置帧可用标志
     uvc_free_frame(bgr);
@@ -107,8 +107,8 @@ void set_camera_gimbal_control(uvc_device_handle_t *deviceHandle, const char hor
     data[1] = horizontal_speed;
     data[2] = vertical_direction;
     data[3] = vertical_speed;
-    printf("horizontal_direction = %d, horizontal_speed = %d, vertical_direction = %d, vertical_speed = %d\n",
-           horizontal_direction, horizontal_speed, vertical_direction, vertical_speed);
+    spdlog::debug("horizontal_direction = {}, horizontal_speed = {}, vertical_direction = {}, vertical_speed = {}",
+                  horizontal_direction, horizontal_speed, vertical_direction, vertical_speed);
     // Send the control request
     res = uvc_set_ctrl(
             deviceHandle,
@@ -119,10 +119,9 @@ void set_camera_gimbal_control(uvc_device_handle_t *deviceHandle, const char hor
     );
 
     if (res != Length) {
-        printf("Failed to set camera control\n");
-        printf("res = %d\n", res);
+        spdlog::error("Failed to set camera control");
     } else {
-        printf("Control request sent successfully\n");
+        spdlog::debug("Control request sent successfully");
     }
 }
 
@@ -145,10 +144,9 @@ void set_camera_gimbal_to_center(uvc_device_handle_t *deviceHandle) {
             Length
     );
     if (res != Length) {
-        printf("Failed to set camera gimbal to center\n");
-        printf("res = %d\n", res);
+        spdlog::error("Failed to set camera gimbal to center");
     } else {
-        printf("Set camera gimbal to center control request sent successfully\n");
+        spdlog::debug("Set camera gimbal to center control request sent successfully");
     }
 }
 
@@ -172,10 +170,9 @@ void set_camera_zoom_absolute(uvc_device_handle_t *deviceHandle, int zoom) {
     );
 
     if (res != Length) {
-        printf("Failed to set camera zoom\n");
-        printf("res = %d\n", res);
+        spdlog::error("Failed to set camera zoom");
     } else {
-        printf("Control request sent successfully\n");
+        spdlog::debug("Set camera zoom to {} control request sent successfully", zoom);
     }
 }
 
@@ -216,9 +213,9 @@ void set_camera_gimbal_location(uvc_device_handle_t *deviceHandle, int horizonta
     );
 
     if (res != Length) {
-        printf("Failed to set camera gimbal location\n");
-        printf("res = %d\n", res);
+        spdlog::error("Failed to set camera gimbal location");
     } else {
-        printf("Control request sent successfully\n");
+        spdlog::debug("Set camera gimbal location to ({}, {}) control request sent successfully", horizontal_location,
+                      vertical_location);
     }
 }

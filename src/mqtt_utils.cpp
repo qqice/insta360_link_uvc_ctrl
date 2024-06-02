@@ -10,17 +10,17 @@ const char *MQTT_TOPIC = "camera/control"; // 订阅的主题
 // MQTT消息回调函数
 void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message) {
     if (message->payloadlen) {
-        std::cout << "Received message: " << (char *) message->payload << std::endl;
+        spdlog::info("Received message: {}", (char *) message->payload);
         // 这里处理接收到的控制数据
     } else {
-        std::cout << message->topic << " (null)\n";
+        spdlog::error("Received message with null payload");
     }
     fflush(stdout);
     try {
         nlohmann::json jsonParsed = nlohmann::json::parse((char *) message->payload);
 
         // 访问解析后的JSON数据
-        std::cout << "control: " << jsonParsed["control"].get<int>() << std::endl;
+        spdlog::debug("control: {}", jsonParsed["control"].get<int>());
         switch (jsonParsed["control"].get<int>()) {
             case CAMERA_GIMBAL_CONTROL:
                 set_camera_gimbal_control(devh, (char) jsonParsed["horizontal_direction"].get<int>(),
@@ -52,12 +52,12 @@ void on_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
                 //   run_tomato_maturity_inf();
                 //   break;
             default:
-                std::cerr << "Unknown control command: " << jsonParsed["control"] << std::endl;
+                spdlog::error("Unknown control command: {}", jsonParsed["control"].get<int>());
                 break;
         }
     } catch (nlohmann::json::parse_error &e) {
         // 如果解析过程中发生错误，输出错误信息
-        std::cerr << "JSON parse error: " << e.what() << std::endl;
+        spdlog::error("JSON parse error: {}", e.what());
     }
 }
 

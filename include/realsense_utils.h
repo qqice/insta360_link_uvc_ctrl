@@ -3,6 +3,7 @@
 
 #include <librealsense2/rs.hpp>
 #include <opencv2/opencv.hpp>
+#include "spdlog/spdlog.h"
 
 void realsense_loop();
 extern int rs_frame_width;

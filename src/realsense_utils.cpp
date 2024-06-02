@@ -1,7 +1,7 @@
 #include "realsense_utils.h"
 int rs_frame_width = 1280;
 int rs_frame_height = 720;
-int rs_frame_rate = 30;
+int rs_frame_rate = 6;
 void realsense_loop() {
     rs2::colorizer color_map;
     rs2::pipeline pipe;
@@ -22,23 +22,23 @@ void realsense_loop() {
     while (true) {
         rs2::frameset frames = pipe.wait_for_frames();
         rs2::frame depth = frames.get_depth_frame().apply_filter(color_map);
-//        const int depth_width_img = depth.as<rs2::video_frame>().get_width();
-//        const int depth_height_img = depth.as<rs2::video_frame>().get_height();
-//        std::cout << "depth width: " << depth_width_img << " height: " << depth_height_img << std::endl;
+        const int depth_width_img = depth.as<rs2::video_frame>().get_width();
+        const int depth_height_img = depth.as<rs2::video_frame>().get_height();
+        spdlog::debug("depth width: {} height: {}", depth_width_img, depth_height_img);
         cv::Mat depth_image(cv::Size(rs_frame_width, rs_frame_height), CV_8UC3, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
         depth_writer.write(depth_image);
 
         rs2::video_frame ir_frame_left = frames.get_infrared_frame(1);
-//        const int ir_left_width_img = ir_frame_left.as<rs2::video_frame>().get_width();
-//        const int ir_left_height_img = ir_frame_left.as<rs2::video_frame>().get_height();
-//        std::cout << "ir left width: " << ir_left_width_img << " height: " << ir_left_height_img << std::endl;
+        const int ir_left_width_img = ir_frame_left.as<rs2::video_frame>().get_width();
+        const int ir_left_height_img = ir_frame_left.as<rs2::video_frame>().get_height();
+        spdlog::debug("ir left width: {} height: {}", ir_left_width_img, ir_left_height_img);
         cv::Mat ir_left(cv::Size(rs_frame_width, rs_frame_height), CV_8UC1, (void*)ir_frame_left.get_data(), cv::Mat::AUTO_STEP);
         left_writer.write(ir_left);
 
         rs2::video_frame ir_frame_right = frames.get_infrared_frame(2);
-//        const int ir_right_width_img = ir_frame_right.as<rs2::video_frame>().get_width();
-//        const int ir_right_height_img = ir_frame_right.as<rs2::video_frame>().get_height();
-//        std::cout << "ir right width: " << ir_right_width_img << " height: " << ir_right_height_img << std::endl;
+        const int ir_right_width_img = ir_frame_right.as<rs2::video_frame>().get_width();
+        const int ir_right_height_img = ir_frame_right.as<rs2::video_frame>().get_height();
+        spdlog::debug("ir right width: {} height: {}", ir_right_width_img, ir_right_height_img);
         cv::Mat ir_right(cv::Size(rs_frame_width, rs_frame_height), CV_8UC1, (void*)ir_frame_right.get_data(), cv::Mat::AUTO_STEP);
         right_writer.write(ir_right);
 
