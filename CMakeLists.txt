@@ -38,8 +38,6 @@ find_package(libuvc REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS} include ${realsense_INCLUDE_DIR})
 set(PROJECT_SOURCES
         src/main.cpp
-        include/inference.h
-        src/inference.cpp
         include/mqtt_utils.h
         src/mqtt_utils.cpp
         include/uvc_utils.h
@@ -50,7 +48,6 @@ set(PROJECT_SOURCES
 
 # 定义可执行文件
 add_executable(UVCCapture ${PROJECT_SOURCES})
-add_executable(inf_example src/inf_example.cpp src/inference.cpp include/inference.h)
 # 链接OpenCV和libuvc库
 target_link_libraries(UVCCapture ${OpenCV_LIBS} ${realsense2_LIBRARY} LibUVC::UVCShared PkgConfig::Mosquitto Threads::Threads nlohmann_json::nlohmann_json spdlog::spdlog)
-target_link_libraries(inf_example ${OpenCV_LIBS})
+

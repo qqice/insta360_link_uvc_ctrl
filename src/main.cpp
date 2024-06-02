@@ -5,7 +5,6 @@
 #include <csignal>
 #include "mqtt_utils.h"
 #include "uvc_utils.h"
-#include "inference.h"
 #include "realsense_utils.h"
 #include "spdlog/spdlog.h"
 
