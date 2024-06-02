@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
         spdlog::error("uvc_init failed");
         return res;
     }
-=
+
     spdlog::info("UVC initialized");
 
     /* Locates the first attached UVC device, stores in dev */
