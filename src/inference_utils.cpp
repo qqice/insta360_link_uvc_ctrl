@@ -11,15 +11,17 @@ void inference_thread() {
     auto rknn_pool = std::make_unique<RknnPool>(
             model_path, thread_num, label_path);
     spdlog::info("RKNN pool initialized");
-    std::unique_ptr<cv::Mat> image = std::make_unique<cv::Mat>();
     while (true) {
         if (need_inference.load()) { // 收到"推理"请求
             spdlog::info("Inference_thread received inference request");
+            std::unique_ptr<cv::Mat> image = std::make_unique<cv::Mat>();
             if (frame_available.load()) { // 检查帧可用标志
                 {
+                    spdlog::info("Get frame");
                     std::lock_guard<std::mutex> lock(frame_mutex);
                     *image = current_frame.clone(); // 获取当前帧副本
                 }
+                spdlog::info("Frame got");
                 frame_available.store(false); // 重置帧可用标志
                 if (!image->empty()) {
                     spdlog::info("Start inference");
@@ -32,10 +34,10 @@ void inference_thread() {
                         image_res = rknn_pool->GetImageResultFromQueue();
                     }
                     spdlog::info("Inference finished");
-                    upload_to_CF("result.jpg",*image_res);
+//                    cv::imwrite("result.jpg", *image_res);
+//                    spdlog::info("Result saved");
+                    upload_to_CF(current_name,*image_res);
                     spdlog::info("Result uploaded");
-                    // cv::imwrite("result.jpg", *image_res);
-                    // spdlog::info("Result saved");
                 }
             }
             need_inference.store(false); // 重置"推理"请求状态

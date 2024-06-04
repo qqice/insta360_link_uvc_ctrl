@@ -10,5 +10,5 @@
 #include <curl/curl.h>
 #include <opencv2/opencv.hpp>
 #include "spdlog/spdlog.h"
-void upload_to_CF(const std::string &file_path, cv::Mat &img);
+void upload_to_CF(const std::string &file_path, const cv::Mat &img);
 #endif //UPLOAD_UTILS_H
