@@ -17,11 +17,9 @@ void inference_thread() {
             std::unique_ptr<cv::Mat> image = std::make_unique<cv::Mat>();
             if (frame_available.load()) { // 检查帧可用标志
                 {
-                    spdlog::info("Get frame");
                     std::lock_guard<std::mutex> lock(frame_mutex);
                     *image = current_frame.clone(); // 获取当前帧副本
                 }
-                spdlog::info("Frame got");
                 frame_available.store(false); // 重置帧可用标志
                 if (!image->empty()) {
                     spdlog::info("Start inference");
