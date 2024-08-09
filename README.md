@@ -1,5 +1,5 @@
 # insta360_link_uvc_ctrl_test
-使用libuvc opencv mqtt gstreamer，实现insta360 link的实时视频传输和云台控制
+使用libuvc opencv mqtt gstreamer rkmpp以及rknn，实现基于Rockchip RK3588平台，使用insta360 link的实时视频传输、云台控制以及YOLOv8目标检测。
 
 libuvc:https://github.com/libuvc/libuvc
 
