@@ -5,9 +5,12 @@
 #include <csignal>
 #include "mqtt_utils.h"
 #include "uvc_utils.h"
-#include "realsense_utils.h"
 #include "spdlog/spdlog.h"
 #include "inference_utils.h"
+
+#ifdef USE_REALSENSE
+#include "realsense_utils.h"
+#endif
 
 // 标志变量，用来控制循环
 volatile sig_atomic_t loopFlag = 1;
@@ -57,8 +60,12 @@ int main(int argc, char **argv) {
 
     // 创建并启动处理MQTT消息的线程
     std::thread mqtt_thread(mqtt_loop, mosq);
+
+#ifdef USE_REALSENSE
     // 创建并启动Realsense线程
     std::thread realsense_thread(realsense_loop);
+#endif
+
     // 创建并启动推理线程
     std::thread inf_thread(inference_thread);
 
