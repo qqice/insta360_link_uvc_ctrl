@@ -36,8 +36,41 @@ find_package(CURL REQUIRED)
 set(libuvc_DIR /usr/local/lib/cmake/libuvc)
 find_package(libuvc REQUIRED)
 
+# 添加选项来控制是否使用RDK推理
+option(USE_RDK "Compile with RDK inference support" ON)
+
 # 添加选项来控制是否编译 realsense 相关的代码
-option(USE_REALSENSE "Compile with RealSense support" ON)
+option(USE_REALSENSE "Compile with RealSense support" OFF)
+
+if (USE_RDK)
+    message(STATUS "Compile with RDK inference support")
+    add_definitions(-DUSE_RDK)
+    
+    # 添加RDK BPU相关的库路径和头文件
+    # 这些路径需要根据实际的RDK SDK安装位置调整
+    set(RDK_SDK_PATH "/usr/include/dnn")
+
+    set(DNN_LIB_PATH "/usr/lib/")
+    
+    if(EXISTS ${RDK_SDK_PATH})
+        include_directories(${RDK_SDK_PATH}/include)
+        link_directories(${RDK_SDK_PATH}/lib)
+        list(APPEND PROJECT_LIBS
+            dnn
+            rt
+            dl
+        )
+    else()
+        message(WARNING "RDK SDK not found at ${RDK_SDK_PATH}, you may need to set the correct path")
+    endif()
+    
+    list(APPEND PROJECT_SOURCES
+        include/rdk_utils.h
+        src/rdk_utils.cpp
+    )
+else ()
+    message(STATUS "Compile without RDK inference support")
+endif()
 
 if (USE_REALSENSE)
     message(STATUS "Compile with RealSense support")
@@ -75,16 +108,49 @@ target_link_libraries(UVCCapture
     Threads::Threads
     nlohmann_json::nlohmann_json
     spdlog::spdlog
-    yolov8_lib
     ${bytetrack_LIBS}
     ${CURL_LIBRARIES}
     ${PROJECT_LIBS}
 )
 
-add_executable(inference_demo src/rknn_inference.cpp)
-target_link_libraries(inference_demo
-    ${OpenCV_LIBS}
-    ${bytetrack_LIBS}
-    spdlog::spdlog
-    yolov8_lib
+# 添加V4L2视频捕获程序
+list(APPEND V4L2_PROJECT_SOURCES
+    src/main_v4l2.cpp
+    include/mqtt_utils.h
+    src/mqtt_utils.cpp
+    include/uvc_utils.h
+    src/uvc_utils.cpp
+    src/inference_utils.cpp
+    include/inference_utils.h
+    src/upload_utils.cpp
+    include/upload_utils.h
+    ${PROJECT_SOURCES}
 )
+
+# 去除重复的源文件
+list(REMOVE_DUPLICATES V4L2_PROJECT_SOURCES)
+# 移除原main.cpp，使用main_v4l2.cpp
+list(REMOVE_ITEM V4L2_PROJECT_SOURCES src/main.cpp)
+
+add_executable(V4L2Capture ${V4L2_PROJECT_SOURCES})
+target_link_libraries(V4L2Capture
+    ${OpenCV_LIBS}
+    LibUVC::UVCShared
+    PkgConfig::Mosquitto
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog
+    ${bytetrack_LIBS}
+    ${CURL_LIBRARIES}
+    ${PROJECT_LIBS}
+)
+
+# 添加RDK推理演示程序
+if (USE_RDK)
+    add_executable(rdk_inference_demo src/rdk_inference_demo.cpp src/rdk_utils.cpp)
+    target_link_libraries(rdk_inference_demo
+        ${OpenCV_LIBS}
+        spdlog::spdlog
+        ${PROJECT_LIBS}
+    )
+endif()

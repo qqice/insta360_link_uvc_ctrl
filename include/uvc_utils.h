@@ -11,6 +11,7 @@
 #include "spdlog/spdlog.h"
 extern uvc_device_handle_t *devh;
 void cb(uvc_frame_t *frame, void *ptr);
+void video_capture_loop(const std::string& device_path);
 void set_camera_gimbal_control(uvc_device_handle_t *deviceHandle, char horizontal_direction, char horizontal_speed,
                                char vertical_direction, char vertical_speed);
 void stop_camera_gimbal_control(uvc_device_handle_t *deviceHandle);

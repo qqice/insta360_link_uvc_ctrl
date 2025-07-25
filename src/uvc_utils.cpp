@@ -1,4 +1,5 @@
 #include "uvc_utils.h"
+#include <iomanip>
 
 int width = 1920;
 int height = 1080;
@@ -10,8 +11,8 @@ const char *audio_encoder = "opusenc";
 
 uvc_device_handle_t *devh; // 定义全局变量devh
 
-cv::VideoWriter out(std::string("appsrc ! videoconvert ! mpph265enc ! queue ! s.sink_0 alsasrc device=") + audio_device + " ! queue ! audioconvert ! " + audio_encoder + " ! s.sink_1 rtspclientsink name=s location=" +
-                    rtsp_server,
+cv::VideoWriter out(std::string("appsrc ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=fast bitrate=3000 key-int-max=") + std::to_string(fps * 2) + \
+    " ! video/x-h264,profile=baseline ! rtspclientsink location=" + rtsp_server,
                     cv::CAP_GSTREAMER, 0, fps, cv::Size(width, height), true);
 
 std::atomic<bool> need_inference(false);
@@ -92,6 +93,77 @@ void cb(uvc_frame_t *frame, void *ptr) {
     }
     frame_available.store(true); // 设置帧可用标志
     uvc_free_frame(bgr);
+}
+
+void video_capture_loop(const std::string& device_path) {
+    cv::VideoCapture cap;
+    
+    // 打开视频设备
+    if (!cap.open(device_path, cv::CAP_V4L2)) {
+        spdlog::error("无法打开视频设备: {}", device_path);
+        return;
+    }
+    
+    // 设置视频参数
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, width);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+    cap.set(cv::CAP_PROP_FPS, fps);
+    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    
+    // 验证设置的参数
+    int actual_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    int actual_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+    double actual_fps = cap.get(cv::CAP_PROP_FPS);
+    
+    spdlog::info("视频设备 {} 已打开，分辨率: {}x{}, 帧率: {:.2f}", 
+                 device_path, actual_width, actual_height, actual_fps);
+    
+    cv::Mat frame;
+    
+    while (cap.isOpened()) {
+        // 读取一帧
+        if (!cap.read(frame)) {
+            spdlog::error("无法读取视频帧");
+            break;
+        }
+        
+        if (frame.empty()) {
+            continue;
+        }
+        
+        // 获取当前时间并添加时间戳
+        std::time_t now = std::time(nullptr);
+        std::tm *ltm = std::localtime(&now);
+        
+        std::stringstream ss;
+        ss << 1900 + ltm->tm_year << "-"
+           << std::setfill('0') << std::setw(2) << 1 + ltm->tm_mon << "-"
+           << std::setfill('0') << std::setw(2) << ltm->tm_mday << " "
+           << std::setfill('0') << std::setw(2) << ltm->tm_hour << ":"
+           << std::setfill('0') << std::setw(2) << ltm->tm_min << ":"
+           << std::setfill('0') << std::setw(2) << ltm->tm_sec;
+        std::string timestamp = ss.str();
+        
+        // 在图像上添加时间戳
+        cv::Size textSize = cv::getTextSize(timestamp, fontFace, fontScale, thickness, &baseline);
+        cv::Point textOrg(frame.cols - textSize.width - 10, textSize.height + 10);
+        cv::putText(frame, timestamp, textOrg, fontFace, fontScale, color, thickness);
+        
+        // 更新当前帧并写入输出流
+        {
+            std::lock_guard<std::mutex> lock(frame_mutex);
+            current_frame = frame.clone();
+            out.write(frame);
+        }
+        
+        frame_available.store(true);
+        
+        // 短暂延时以控制帧率
+        cv::waitKey(1);
+    }
+    
+    cap.release();
+    spdlog::info("视频捕获已停止");
 }
 
 void set_camera_gimbal_control(uvc_device_handle_t *deviceHandle, const char horizontal_direction, const char horizontal_speed,
